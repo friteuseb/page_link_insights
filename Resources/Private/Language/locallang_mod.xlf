@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="EXT:page_link_insights/Resources/Private/Language/locallang_mod.xlf" date="2024-01-14T12:00:00Z" product-name="demo_force_diagram">
+        <header/>
+        <body>
+            <trans-unit id="mlang_labels_tablabel" resname="mlang_labels_tablabel">
+                <source>Force Diagram</source>
+            </trans-unit>
+            <trans-unit id="mlang_labels_tabdescr" resname="mlang_labels_tabdescr">
+                <source>D3.js Force Diagram Visualization</source>
+            </trans-unit>
+            <trans-unit id="mlang_tabs_tab" resname="mlang_tabs_tab">
+                <source>Force Diagram</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
