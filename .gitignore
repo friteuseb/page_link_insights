@@ -1,0 +1,31 @@
+# Ignorer les fichiers générés par le système
+*.log
+*.temp
+*.bak
+*.swp
+
+# Ignorer les fichiers spécifiques à TYPO3
+/public/typo3temp/*
+/public/fileadmin/_processed_/*
+/public/uploads/*
+/var/*
+!/var/.keep
+
+# Ignorer les configurations locales
+/.idea/
+/.vscode/
+/.DS_Store
+
+# Ignorer les dépendances Composer, sauf composer.json et composer.lock
+/vendor/*
+!/vendor/autoload.php
+!/vendor/composer
+
+# Ignorer les fichiers spécifiques au système
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.~lock.*
+
+# Ignorer les fichiers générés par DDEV
+.ddev
