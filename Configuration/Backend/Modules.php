@@ -1,24 +1,20 @@
 <?php
 
 return [
-    'tools_page_link_insights' => [
-        'parent' => 'tools',
-        'position' => ['after' => 'tools_install'],
-        'access' => 'admin',
+    'web_page_link_insights' => [
+        'parent' => 'web',
+        'position' => ['after' => 'web_layout'],
+        'access' => 'user,group',
         'workspaces' => 'live',
-        'path' => '/module/tools/pagelinkinsights',
+        'path' => '/module/web/page-link-insights',
         'labels' => 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang_mod.xlf',
         'iconIdentifier' => 'module-page-link-insights',
+        'navigationComponentId' => 'TYPO3/CMS/Backend/PageTree/PageTreeElement',
         'extensionName' => 'PageLinkInsights',
         'controllerActions' => [
             \Cwolf\PageLinkInsights\Controller\BackendController::class => [
                 'main'
             ],
-        ],
-        // Configuration module
-        'moduleData' => [
-            'name' => 'tools_page_link_insights',
-            'packageName' => 'page_link_insights'
         ],
     ],
 ];

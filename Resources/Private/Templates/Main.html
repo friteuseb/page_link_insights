@@ -4,13 +4,31 @@
 <f:layout name="Default" />
 
 <f:section name="content">
-    <div class="module h-100">
-        <div class="module-body">
-            <div id="force-diagram-container" class="position-absolute top-0 start-0 end-0 bottom-0">
-                <svg id="force-diagram" class="w-100 h-100"></svg>
+    <f:if condition="{noPageSelected}">
+        <div class="module">
+            <div class="module-body t3js-module-body">
+                <div class="callout callout-info">
+                    <div class="media">
+                        <div class="media-body">
+                            <h4 class="callout-title">Sélectionnez une page</h4>
+                            <div class="callout-body">
+                                <p>Veuillez sélectionner une page dans l'arborescence pour visualiser les liens de contenu.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <pre id="diagram-data" style="display: none;"><f:format.raw value="{data}"/></pre>
         </div>
-    </div>
+    </f:if>
+    <f:if condition="!{noPageSelected}">
+        <div class="module h-100">
+            <div class="module-body">
+                <div id="force-diagram-container" class="position-absolute top-0 start-0 end-0 bottom-0">
+                    <svg id="force-diagram" class="w-100 h-100"></svg>
+                </div>
+                <pre id="diagram-data" style="display: none;"><f:format.raw value="{data}"/></pre>
+            </div>
+        </div>
+    </f:if>
 </f:section>
 </html>

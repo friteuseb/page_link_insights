@@ -10,6 +10,7 @@ use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 
 class BackendController extends ActionController
 {
@@ -23,7 +24,7 @@ class BackendController extends ActionController
         $this->pageRepository = $pageRepository;
     }
 
-    protected function getPages(): array
+    protected function getPagesInSubtree(int $pageUid): array
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('pages');
@@ -32,69 +33,94 @@ class BackendController extends ActionController
             ->removeAll()
             ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
             
-        return $queryBuilder
-            ->select('uid', 'pid', 'title')
+        // Récupérer d'abord la page courante
+        $currentPage = $queryBuilder
+            ->select('uid', 'title', 'pid')
             ->from('pages')
-            ->executeQuery()
-            ->fetchAllAssociative();
-    }
-
-    protected function getContentLinks(): array
-    {
-        $links = [];
-        
-        // Récupérer les enregistrements de la table sys_refindex
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('sys_refindex');
-            
-        $refs = $queryBuilder
-            ->select('*')
-            ->from('sys_refindex')
             ->where(
-                $queryBuilder->expr()->eq('ref_table', $queryBuilder->createNamedParameter('pages')),
-                $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter('tt_content'))
+                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageUid))
+            )
+            ->executeQuery()
+            ->fetchAssociative();
+
+        // Récupérer toutes les sous-pages
+        $subPages = $queryBuilder
+            ->select('uid', 'title', 'pid')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pageUid))
             )
             ->executeQuery()
             ->fetchAllAssociative();
 
-        // Récupérer les détails des éléments de contenu référencés
-        $contentElements = [];
-        if (!empty($refs)) {
-            $contentUids = array_unique(array_column($refs, 'recuid'));
+        $allPages = [$currentPage];
+        
+        // Récupérer récursivement les sous-pages
+        foreach ($subPages as $subPage) {
+            $allPages[] = $subPage;
+            $allPages = array_merge($allPages, $this->getPagesInSubtree($subPage['uid']));
+        }
+
+        return $allPages;
+    }
+
+    protected function getContentLinks(array $pageUids): array
+    {
+        $links = [];
+        
+        // Récupérer d'abord tous les éléments de contenu des pages sélectionnées
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tt_content');
             
+        $contentElements = $queryBuilder
+            ->select('uid', 'pid', 'header', 'CType', 'list_type')
+            ->from('tt_content')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'pid',
+                    $queryBuilder->createNamedParameter($pageUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        if (!empty($contentElements)) {
+            $contentUids = array_column($contentElements, 'uid');
+            $contentElements = array_column($contentElements, null, 'uid');
+
+            // Maintenant récupérer les références pour ces éléments de contenu
             $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('tt_content');
+                ->getQueryBuilderForTable('sys_refindex');
                 
-            $contentElements = $queryBuilder
-                ->select('uid', 'pid', 'header', 'CType', 'list_type')
-                ->from('tt_content')
+            $refs = $queryBuilder
+                ->select('*')
+                ->from('sys_refindex')
                 ->where(
+                    $queryBuilder->expr()->eq('ref_table', $queryBuilder->createNamedParameter('pages')),
+                    $queryBuilder->expr()->eq('tablename', $queryBuilder->createNamedParameter('tt_content')),
                     $queryBuilder->expr()->in(
-                        'uid',
+                        'recuid',
                         $queryBuilder->createNamedParameter($contentUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
                     )
                 )
                 ->executeQuery()
                 ->fetchAllAssociative();
-                
-            $contentElements = array_column($contentElements, null, 'uid');
-        }
 
-        // Construction du tableau des liens
-        foreach ($refs as $ref) {
-            if (isset($contentElements[$ref['recuid']])) {
-                $content = $contentElements[$ref['recuid']];
-                $links[] = [
-                    'sourcePageId' => (string)$content['pid'],
-                    'targetPageId' => (string)$ref['ref_uid'],
-                    'contentElement' => [
-                        'uid' => $content['uid'],
-                        'type' => $content['CType'],
-                        'header' => $content['header'],
-                        'plugin' => $content['list_type'] ?? null,
-                        'field' => $ref['field']
-                    ]
-                ];
+            foreach ($refs as $ref) {
+                if (isset($contentElements[$ref['recuid']])) {
+                    $content = $contentElements[$ref['recuid']];
+                    $links[] = [
+                        'sourcePageId' => (string)$content['pid'],
+                        'targetPageId' => (string)$ref['ref_uid'],
+                        'contentElement' => [
+                            'uid' => $content['uid'],
+                            'type' => $content['CType'],
+                            'header' => $content['header'],
+                            'plugin' => $content['list_type'] ?? null,
+                            'field' => $ref['field']
+                        ]
+                    ];
+                }
             }
         }
 
@@ -106,7 +132,7 @@ class BackendController extends ActionController
         // Créer un mapping des UIDs de pages vers leurs titres
         $pageTitles = array_column($pages, 'title', 'uid');
         
-        // Collecter uniquement les pages qui ont des liens
+        // Collecter toutes les pages impliquées (source et cible des liens)
         $usedPageIds = [];
         foreach ($links as $link) {
             $usedPageIds[] = $link['sourcePageId'];
@@ -114,7 +140,7 @@ class BackendController extends ActionController
         }
         $usedPageIds = array_unique($usedPageIds);
         
-        // Créer les nœuds uniquement pour les pages utilisées
+        // Créer les nœuds
         $nodes = [];
         foreach ($usedPageIds as $pageId) {
             $nodes[] = [
@@ -123,23 +149,30 @@ class BackendController extends ActionController
             ];
         }
         
-        // Convertir les liens au format attendu par D3
-        $d3Links = array_map(function($link) {
-            return [
-                'source' => $link['sourcePageId'],
-                'target' => $link['targetPageId'],
-                'contentElement' => $link['contentElement']
-            ];
-        }, $links);
-
         return [
             'nodes' => $nodes,
-            'links' => $d3Links
+            'links' => array_map(function($link) {
+                return [
+                    'source' => $link['sourcePageId'],
+                    'target' => $link['targetPageId'],
+                    'contentElement' => $link['contentElement']
+                ];
+            }, $links)
         ];
     }
 
     public function mainAction(): ResponseInterface
     {
+        // Récupérer la page sélectionnée dans le page tree
+        $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
+        
+        if ($pageUid === 0) {
+            $this->view->assign('noPageSelected', true);
+            $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
+            $moduleTemplate->setContent($this->view->render());
+            return $this->htmlResponse($moduleTemplate->renderContent());
+        }
+
         $this->pageRenderer->addJsFile(
             'EXT:page_link_insights/Resources/Public/JavaScript/Vendor/d3.min.js',
         );
@@ -148,8 +181,15 @@ class BackendController extends ActionController
             'EXT:page_link_insights/Resources/Public/JavaScript/force-diagram.js',
         );
     
-        $pages = $this->getPages();
-        $links = $this->getContentLinks();
+        // Récupérer la page et ses sous-pages
+        $pages = $this->getPagesInSubtree($pageUid);
+        $pageUids = array_column($pages, 'uid');
+        
+        // Debug
+        // echo '<pre>' . htmlspecialchars(print_r(['pages' => $pages, 'uids' => $pageUids], true)) . '</pre>';
+        
+        // Récupérer les liens pour ces pages
+        $links = $this->getContentLinks($pageUids);
         $data = $this->buildGraphData($pages, $links);
 
         // Debug
@@ -157,6 +197,7 @@ class BackendController extends ActionController
         // die();
     
         $this->view->assign('data', json_encode($data));
+        $this->view->assign('noPageSelected', false);
     
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->setContent($this->view->render());
