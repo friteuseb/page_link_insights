@@ -6,3 +6,7 @@ services:
 
   Cwolf\PageLinkInsights\:
     resource: '../Classes/*'
+    exclude: '../Classes/Domain/Model/*'
+
+  Cwolf\PageLinkInsights\Controller\BackendController:
+    public: true

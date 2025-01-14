@@ -4,11 +4,10 @@
 <f:layout name="Default" />
 
 <f:section name="content">
-    <div class="module">
+    <div class="module h-100">
         <div class="module-body">
-            <h1>Force Diagram</h1>
-            <div id="force-diagram-container" class="mt-4">
-                <svg id="force-diagram" class="w-full" style="height: 600px;"></svg>
+            <div id="force-diagram-container" class="position-absolute top-0 start-0 end-0 bottom-0">
+                <svg id="force-diagram" class="w-100 h-100"></svg>
             </div>
             <pre id="diagram-data" style="display: none;"><f:format.raw value="{data}"/></pre>
         </div>
