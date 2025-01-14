@@ -1,151 +1,125 @@
 document.addEventListener('DOMContentLoaded', function() {
     const diagramData = JSON.parse(document.getElementById('diagram-data').textContent.trim());
     
-    const container = document.getElementById('force-diagram-container');
-    const svg = d3.select("#force-diagram");
-    
-    // Récupérer les dimensions du conteneur
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    
-    svg
+    const nodes = diagramData.nodes;
+    const links = diagramData.links;
+
+    const width = 800;
+    const height = 600;
+
+    // Identifier les pages qui ont des liens
+    const pagesWithLinks = new Set();
+    links.forEach(link => {
+        pagesWithLinks.add(link.source);
+        pagesWithLinks.add(link.target);
+    });
+
+    // Définir les couleurs selon que la page a des liens ou non
+    const getNodeColor = (nodeId) => {
+        return pagesWithLinks.has(nodeId) ? "#4a90e2" : "#d3d3d3";
+    };
+
+    const svg = d3.select("#force-diagram")
         .attr("width", width)
-        .attr("height", height)
-        .attr("viewBox", [0, 0, width, height]);
+        .attr("height", height);
 
-    const g = svg.append("g");
-
-    // Ajouter le zoom
-    const zoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .on("zoom", (event) => {
-            g.attr("transform", event.transform);
-        });
-
-    svg.call(zoom);
-
-    const simulation = d3.forceSimulation(diagramData.nodes)
-        .force("link", d3.forceLink(diagramData.links)
-            .id(d => d.id)
-            .distance(200))
-        .force("charge", d3.forceManyBody().strength(-500))
-        .force("center", d3.forceCenter(width / 2, height / 2));
-
-    // Créer les liens
-    const link = g.append("g")
-        .selectAll("g")
-        .data(diagramData.links)
-        .join("g");
-
-    link.append("line")
-        .attr("stroke", "#999")
-        .attr("stroke-width", 2)
-        .attr("stroke-dasharray", "5,5")
-        .attr("marker-end", "url(#arrow)");
-
-    // Ajouter les flèches
+    // Ajouter un marqueur de flèche pour les liens
     svg.append("defs").append("marker")
-        .attr("id", "arrow")
-        .attr("viewBox", "0 -5 10 10")
+        .attr("id", "arrowhead")
+        .attr("viewBox", "-0 -5 10 10")
         .attr("refX", 20)
         .attr("refY", 0)
+        .attr("orient", "auto")
         .attr("markerWidth", 6)
         .attr("markerHeight", 6)
-        .attr("orient", "auto")
         .append("path")
-        .attr("fill", "#999")
-        .attr("d", "M0,-5L10,0L0,5");
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#999");
 
-    // Créer les nœuds
-    const node = g.append("g")
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links)
+            .id(d => d.id)
+            .distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(50));
+
+    const link = svg.append("g")
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("stroke", "#999")
+        .attr("stroke-width", 2)
+        .attr("marker-end", "url(#arrowhead)");
+
+    const node = svg.append("g")
         .selectAll("g")
-        .data(diagramData.nodes)
+        .data(nodes)
         .join("g")
         .call(d3.drag()
             .on("start", dragstarted)
             .on("drag", dragged)
-            .on("end", dragended))
-        .on("contextmenu", function(event, d) {
-            event.preventDefault();
-            // Supprimer le nœud et ses liens associés
-            const nodeId = d.id;
-            diagramData.nodes = diagramData.nodes.filter(n => n.id !== nodeId);
-            diagramData.links = diagramData.links.filter(l => 
-                l.source.id !== nodeId && l.target.id !== nodeId
-            );
-            // Redémarrer la simulation
-            simulation.nodes(diagramData.nodes);
-            simulation.force("link").links(diagramData.links);
-            
-            // Supprimer les éléments visuels
-            d3.select(this).remove();
-            link.filter(l => l.source.id === nodeId || l.target.id === nodeId).remove();
-            
-            simulation.alpha(1).restart();
-        });
+            .on("end", dragended));
 
-    // Ajouter les cercles pour les nœuds
+    // Ajouter des cercles pour les nœuds
     node.append("circle")
         .attr("r", 10)
-        .attr("fill", "#69b3a2");
+        .attr("fill", d => getNodeColor(d.id));
 
-    // Ajouter les labels des nœuds
+    // Ajouter les labels
     node.append("text")
         .attr("dx", 15)
         .attr("dy", ".35em")
-        .text(d => d.title)
-        .attr("font-size", "12px");
+        .attr("font-size", "12px")
+        .text(d => d.title);
 
     // Ajouter les tooltips
     node.append("title")
         .text(d => {
-            const outgoingLinks = diagramData.links.filter(l => l.source.id === d.id);
-            const incomingLinks = diagramData.links.filter(l => l.target.id === d.id);
-            
-            return `Page: ${d.title}
-ID: ${d.id}
-Liens sortants: ${outgoingLinks.length}
-Liens entrants: ${incomingLinks.length}`;
+            const isLinked = pagesWithLinks.has(d.id);
+            const incomingLinks = links.filter(l => l.target.id === d.id).length;
+            const outgoingLinks = links.filter(l => l.source.id === d.id).length;
+            return `Page: ${d.title}\n` +
+                   `ID: ${d.id}\n` +
+                   `Liens entrants: ${incomingLinks}\n` +
+                   `Liens sortants: ${outgoingLinks}`;
         });
 
     simulation.on("tick", () => {
-        link.selectAll("line")
+        link
             .attr("x1", d => d.source.x)
             .attr("y1", d => d.source.y)
             .attr("x2", d => d.target.x)
             .attr("y2", d => d.target.y);
 
-        node.attr("transform", d => `translate(${d.x},${d.y})`);
+        node
+            .attr("transform", d => `translate(${d.x},${d.y})`);
     });
+
+    // Zoom functionality
+    const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on("zoom", (event) => {
+            svg.selectAll("g").attr("transform", event.transform);
+        });
+
+    svg.call(zoom);
 
     // Fonctions pour le drag & drop
-    function dragstarted(event, d) {
+    function dragstarted(event) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
     }
 
-    function dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
+    function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
     }
 
-    function dragended(event, d) {
+    function dragended(event) {
         if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+        event.subject.fx = null;
+        event.subject.fy = null;
     }
-
-    // Ajuster la taille lors du redimensionnement de la fenêtre
-    window.addEventListener('resize', () => {
-        const newWidth = container.clientWidth;
-        const newHeight = container.clientHeight;
-        svg
-            .attr("width", newWidth)
-            .attr("height", newHeight)
-            .attr("viewBox", [0, 0, newWidth, newHeight]);
-        
-        simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
-        simulation.alpha(1).restart();
-    });
 });

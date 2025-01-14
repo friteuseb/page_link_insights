@@ -1,0 +1,5 @@
+# cat=basic/enable; type=string; label=Colpos to analyze (comma-separated)
+colPosToAnalyze = 0,2
+
+# cat=basic/enable; type=boolean; label=Include hidden content
+includeHidden = 0

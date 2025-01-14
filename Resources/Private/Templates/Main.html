@@ -4,9 +4,9 @@
 <f:layout name="Default" />
 
 <f:section name="content">
-    <f:if condition="{noPageSelected}">
-        <div class="module">
-            <div class="module-body t3js-module-body">
+    <div class="module">
+        <div class="module-body">
+            <f:if condition="{noPageSelected}">
                 <div class="callout callout-info">
                     <div class="media">
                         <div class="media-body">
@@ -17,18 +17,27 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </f:if>
-    <f:if condition="!{noPageSelected}">
-        <div class="module h-100">
-            <div class="module-body">
-                <div id="force-diagram-container" class="position-absolute top-0 start-0 end-0 bottom-0">
-                    <svg id="force-diagram" class="w-100 h-100"></svg>
+            </f:if>
+            <f:if condition="!{noPageSelected}">
+                <div id="force-diagram-container" style="width: 100%; height: 800px;">
+                    <svg id="force-diagram"></svg>
                 </div>
                 <pre id="diagram-data" style="display: none;"><f:format.raw value="{data}"/></pre>
-            </div>
+                
+                <f:if condition="{debugLog}">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <f:be.buttons.csh table="xMOD_csh_corebe" field="pagetree_overview">Debug Information</f:be.buttons.csh>
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <pre style="max-height: 400px; overflow: auto;"><f:format.raw value="{debugLog}"/></pre>
+                        </div>
+                    </div>
+                </f:if>
+            </f:if>
         </div>
-    </f:if>
+    </div>
 </f:section>
 </html>
