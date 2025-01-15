@@ -15,32 +15,68 @@ class PageLinkService {
 
     public function getPageLinksForSubtree(int $pageUid): array
     {
-        // Récupérer toutes les pages dans l'arborescence
         $pages = $this->getPagesInSubtree($pageUid);
-        $pageUids = array_column($pages, 'uid');
-        
-        if (empty($pageUids)) {
+        if (empty($pages)) {
             return ['nodes' => [], 'links' => []];
         }
-
-        // Récupérer tous les liens pour ces pages
-        $links = [];
-        $links = array_merge($links, $this->getContentElementLinks($pageUids));
-        $links = array_merge($links, $this->getTypoLinks($pageUids));
-        $links = array_merge($links, $this->getMenuLinks($pageUids));
-        
+    
+        $pageUids = array_column($pages, 'uid');
+        $links = $this->getContentElementLinks($pageUids);
+    
         return $this->formatLinksForD3($links);
+    }
+
+    private function findLinksInContent(string $content): array 
+    {
+        $links = [];
+        
+        // Recherche des liens t3://page
+        if (preg_match_all('/t3:\/\/page\?uid=(\d+)/', $content, $matches)) {
+            foreach ($matches[1] as $pageUid) {
+                $links[] = (int)$pageUid;
+            }
+        }
+        
+        // Recherche des liens <link>
+        if (preg_match_all('/<link (\d+)>/', $content, $matches)) {
+            foreach ($matches[1] as $pageUid) {
+                $links[] = (int)$pageUid;
+            }
+        }
+        
+        // Recherche des liens de type "record:pages:UID"
+        if (preg_match_all('/record:pages:(\d+)/', $content, $matches)) {
+            foreach ($matches[1] as $pageUid) {
+                $links[] = (int)$pageUid;
+            }
+        }
+    
+        // Recherche des anciens liens typolink
+        if (preg_match_all('/\b(?:t3:\/\/)?page,(\d+)(?:,|\s|$)/', $content, $matches)) {
+            foreach ($matches[1] as $pageUid) {
+                $links[] = (int)$pageUid;
+            }
+        }
+    
+        // Recherche des liens HTML standards avec id= ou page=
+        if (preg_match_all('/<a[^>]+href=["\'](?:[^"\']*?)(?:id=|page=)(\d+)/', $content, $matches)) {
+            foreach ($matches[1] as $pageUid) {
+                $links[] = (int)$pageUid;
+            }
+        }
+    
+        return array_unique($links);
     }
 
     private function getPagesInSubtree(int $pageUid): array
     {
+        // Récupérer la page racine
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction())
             ->add(new HiddenRestriction());
-
-        // Récupérer la page racine
+    
         $rootPage = $queryBuilder
             ->select('uid', 'title', 'pid')
             ->from('pages')
@@ -49,73 +85,167 @@ class PageLinkService {
             )
             ->executeQuery()
             ->fetchAssociative();
-
+    
         if (!$rootPage) {
             return [];
         }
-
-        // Récupérer toutes les sous-pages
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
-        $queryBuilder->getRestrictions()
-            ->removeAll()
-            ->add(new DeletedRestriction())
-            ->add(new HiddenRestriction());
-
-        $subPages = $queryBuilder
-            ->select('uid', 'title', 'pid')
-            ->from('pages')
-            ->where(
-                $queryBuilder->expr()->like(
-                    'pid_list',
-                    $queryBuilder->createNamedParameter(
-                        '%,' . $pageUid . ',%',
-                        \PDO::PARAM_STR
+    
+        // Récupérer toutes les sous-pages récursivement
+        $allPages = [$rootPage];
+        $pagesToProcess = [$pageUid];
+        
+        while (!empty($pagesToProcess)) {
+            $currentPageUids = $pagesToProcess;
+            $pagesToProcess = [];
+    
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(new DeletedRestriction())
+                ->add(new HiddenRestriction());
+                
+            $subPages = $queryBuilder
+                ->select('uid', 'title', 'pid')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->in(
+                        'pid',
+                        $queryBuilder->createNamedParameter($currentPageUids, Connection::PARAM_INT_ARRAY)
                     )
                 )
-            )
-            ->executeQuery()
-            ->fetchAllAssociative();
-
-        return array_merge([$rootPage], $subPages);
+                ->executeQuery()
+                ->fetchAllAssociative();
+    
+            foreach ($subPages as $subPage) {
+                $allPages[] = $subPage;
+                $pagesToProcess[] = $subPage['uid'];
+            }
+        }
+    
+        return $allPages;
     }
 
-    private function getContentElementLinks(array $pageUids): array {
+    private function getContentElementLinks(array $pageUids): array 
+    {
+        $links = [];
+        $allowedColPos = GeneralUtility::intExplode(',', '0,1,2,3,4', true);
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tt_content');
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction())
             ->add(new HiddenRestriction());
 
-        $result = $queryBuilder
-            ->select('uid', 'pid', 'header', 'bodytext', 'CType')
+        $contentElements = $queryBuilder
+            ->select('uid', 'pid', 'header', 'bodytext', 'CType', 'list_type', 
+                    'colPos', 'header_link', 'pages', 'selected_categories')
             ->from('tt_content')
             ->where(
                 $queryBuilder->expr()->in(
                     'pid',
                     $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->in(
+                    'colPos',
+                    $queryBuilder->createNamedParameter($allowedColPos, Connection::PARAM_INT_ARRAY)
                 )
             )
             ->executeQuery()
             ->fetchAllAssociative();
 
-        $links = [];
-        foreach ($result as $content) {
-            // Analyse du bodytext pour les liens HTML
-            $htmlLinks = $this->extractHtmlLinks($content['bodytext']);
-            foreach ($htmlLinks as $link) {
-                $target = $this->extractPageId($link);
-                if ($target > 0) {
+        foreach ($contentElements as $content) {
+            // Traitement spécial pour les menus et sitemaps
+            if (str_starts_with($content['CType'], 'menu_') || $content['CType'] === 'sitemap') {
+                $targetPages = [];
+                
+                switch ($content['CType']) {
+                    case 'menu_subpages':
+                    case 'menu_card_dir':
+                        if (!empty($content['pages'])) {
+                            $parentPageUid = (int)$content['pages'];
+                            $subPages = $this->getSubPages($parentPageUid);
+                            $targetPages = array_column($subPages, 'uid');
+                        }
+                        break;
+                        
+                    default:
+                        if (!empty($content['pages'])) {
+                            $targetPages = GeneralUtility::intExplode(',', $content['pages'], true);
+                        }
+                }
+                
+                foreach ($targetPages as $targetPageUid) {
                     $links[] = [
-                        'source' => $content['pid'],
-                        'target' => $target,
-                        'type' => 'html',
-                        'element' => 'tt_content_' . $content['uid']
+                        'sourcePageId' => (string)$content['pid'],
+                        'targetPageId' => (string)$targetPageUid,
+                        'contentElement' => [
+                            'uid' => $content['uid'],
+                            'type' => $content['CType'],
+                            'header' => $content['header'],
+                            'colPos' => $content['colPos'],
+                            'field' => 'pages'
+                        ]
+                    ];
+                }
+            }
+
+            // Chercher dans le bodytext
+            if ($content['bodytext']) {
+                foreach ($this->findLinksInContent($content['bodytext']) as $targetPageUid) {
+                    $links[] = [
+                        'sourcePageId' => (string)$content['pid'],
+                        'targetPageId' => (string)$targetPageUid,
+                        'contentElement' => [
+                            'uid' => $content['uid'],
+                            'type' => $content['CType'],
+                            'header' => $content['header'],
+                            'colPos' => $content['colPos'],
+                            'field' => 'bodytext'
+                        ]
+                    ];
+                }
+            }
+
+            // Chercher dans le header_link
+            if ($content['header_link']) {
+                foreach ($this->findLinksInContent($content['header_link']) as $targetPageUid) {
+                    $links[] = [
+                        'sourcePageId' => (string)$content['pid'],
+                        'targetPageId' => (string)$targetPageUid,
+                        'contentElement' => [
+                            'uid' => $content['uid'],
+                            'type' => $content['CType'],
+                            'header' => $content['header'],
+                            'colPos' => $content['colPos'],
+                            'field' => 'header_link'
+                        ]
                     ];
                 }
             }
         }
 
         return $links;
+    }
+
+
+    private function getSubPages(int $pageUid): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction());
+    
+        return $queryBuilder
+            ->select('uid', 'title')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'pid',
+                    $queryBuilder->createNamedParameter($pageUid, \PDO::PARAM_INT)
+                )
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
     }
 
     private function getTypoLinks(array $pageUids): array {
@@ -202,35 +332,28 @@ class PageLinkService {
         return 0;
     }
 
-    private function formatLinksForD3(array $links): array {
-        $nodes = [];
-        $formattedLinks = [];
-        
-        $pageIds = [];
-        foreach ($links as $link) {
-            $pageIds[] = $link['source'];
-            $pageIds[] = $link['target'];
-        }
-        $pageIds = array_unique($pageIds);
 
-        foreach ($pageIds as $pageId) {
+    private function formatLinksForD3(array $links): array
+    {
+        $nodes = [];
+        $allPageIds = [];
+        foreach ($links as $link) {
+            $allPageIds[] = $link['sourcePageId'];
+            $allPageIds[] = $link['targetPageId'];
+        }
+        $allPageIds = array_unique($allPageIds);
+
+        // Créer les nœuds
+        foreach ($allPageIds as $pageId) {
             $nodes[] = [
                 'id' => $pageId,
-                'title' => $this->getPageTitle($pageId)
-            ];
-        }
-
-        foreach ($links as $link) {
-            $formattedLinks[] = [
-                'source' => $link['source'],
-                'target' => $link['target'],
-                'type' => $link['type']
+                'title' => $this->getPageTitle((int)$pageId)
             ];
         }
 
         return [
             'nodes' => $nodes,
-            'links' => $formattedLinks
+            'links' => $links // Les liens sont déjà au bon format
         ];
     }
 
