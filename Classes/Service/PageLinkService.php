@@ -58,38 +58,32 @@ class PageLinkService {
             }
         }
     
-        // Recherche des liens HTML standards avec id= ou page=
-        if (preg_match_all('/<a[^>]+href=["\'](?:[^"\']*?)(?:id=|page=)(\d+)/', $content, $matches)) {
-            foreach ($matches[1] as $pageUid) {
-                $links[] = (int)$pageUid;
-            }
-        }
-    
         return array_unique($links);
     }
 
     private function getPagesInSubtree(int $pageUid): array
     {
-        // Récupérer la page racine
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction())
             ->add(new HiddenRestriction());
-    
+
         $rootPage = $queryBuilder
             ->select('uid', 'title', 'pid')
             ->from('pages')
             ->where(
-                $queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageUid, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('uid', 
+                    $queryBuilder->createNamedParameter($pageUid, \PDO::PARAM_INT)
+                )
             )
             ->executeQuery()
             ->fetchAssociative();
-    
+
         if (!$rootPage) {
             return [];
         }
-    
+
         // Récupérer toutes les sous-pages récursivement
         $allPages = [$rootPage];
         $pagesToProcess = [$pageUid];
@@ -97,7 +91,7 @@ class PageLinkService {
         while (!empty($pagesToProcess)) {
             $currentPageUids = $pagesToProcess;
             $pagesToProcess = [];
-    
+
             $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
             $queryBuilder->getRestrictions()
                 ->removeAll()
@@ -115,27 +109,28 @@ class PageLinkService {
                 )
                 ->executeQuery()
                 ->fetchAllAssociative();
-    
+
             foreach ($subPages as $subPage) {
                 $allPages[] = $subPage;
                 $pagesToProcess[] = $subPage['uid'];
             }
         }
-    
+
         return $allPages;
     }
+
 
     private function getContentElementLinks(array $pageUids): array 
     {
         $links = [];
         $allowedColPos = GeneralUtility::intExplode(',', '0,1,2,3,4', true);
-
+    
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tt_content');
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction())
             ->add(new HiddenRestriction());
-
+    
         $contentElements = $queryBuilder
             ->select('uid', 'pid', 'header', 'bodytext', 'CType', 'list_type', 
                     'colPos', 'header_link', 'pages', 'selected_categories')
@@ -152,10 +147,12 @@ class PageLinkService {
             )
             ->executeQuery()
             ->fetchAllAssociative();
-
+    
         foreach ($contentElements as $content) {
-            // Traitement spécial pour les menus et sitemaps
-            if (str_starts_with($content['CType'], 'menu_') || $content['CType'] === 'sitemap') {
+            error_log('Processing content element: ' . $content['uid'] . ' of type ' . $content['CType']);
+            
+            // Traitement spécial pour les menus
+            if (str_starts_with($content['CType'], 'menu_')) {
                 $targetPages = [];
                 
                 switch ($content['CType']) {
@@ -166,6 +163,32 @@ class PageLinkService {
                             $subPages = $this->getSubPages($parentPageUid);
                             $targetPages = array_column($subPages, 'uid');
                         }
+                        break;
+                        
+                    case 'menu_sitemap':
+                    case 'menu_sitemap_pages':
+                        // Pour un sitemap, nous récupérons toutes les pages depuis la racine
+                        $contentPid = (int)$content['pid'];
+                        error_log('Processing sitemap on page: ' . $contentPid);
+                        
+                        $rootLine = $this->getRootLine($contentPid);
+                        error_log('RootLine: ' . print_r($rootLine, true));
+                        
+                        $rootPageUid = $rootLine[0]['uid'] ?? $contentPid;
+                        error_log('Root page UID: ' . $rootPageUid);
+                        
+                        $allPages = $this->getAllPagesFromRoot($rootPageUid);
+                        error_log('Found pages: ' . count($allPages));
+                        error_log('Page UIDs: ' . implode(', ', array_column($allPages, 'uid')));
+                        
+                        $targetPages = array_column($allPages, 'uid');
+                        
+                        // Exclure la page source des cibles pour éviter les auto-références
+                        $targetPages = array_filter($targetPages, function($uid) use ($contentPid) {
+                            return $uid != $contentPid;
+                        });
+                        
+                        error_log('Final target pages: ' . implode(', ', $targetPages));
                         break;
                         
                     default:
@@ -188,7 +211,7 @@ class PageLinkService {
                     ];
                 }
             }
-
+    
             // Chercher dans le bodytext
             if ($content['bodytext']) {
                 foreach ($this->findLinksInContent($content['bodytext']) as $targetPageUid) {
@@ -205,7 +228,7 @@ class PageLinkService {
                     ];
                 }
             }
-
+    
             // Chercher dans le header_link
             if ($content['header_link']) {
                 foreach ($this->findLinksInContent($content['header_link']) as $targetPageUid) {
@@ -223,10 +246,119 @@ class PageLinkService {
                 }
             }
         }
-
+    
         return $links;
     }
 
+
+    /**
+     * Récupère le chemin complet jusqu'à la racine pour une page donnée
+     */
+    private function getRootLine(int $pageUid): array
+    {
+        $rootLine = [];
+        $currentPage = $pageUid;
+
+        while ($currentPage > 0) {
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(new DeletedRestriction())
+                ->add(new HiddenRestriction());
+
+            $page = $queryBuilder
+                ->select('uid', 'pid', 'title', 'doktype')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'uid',
+                        $queryBuilder->createNamedParameter($currentPage, \PDO::PARAM_INT)
+                    )
+                )
+                ->executeQuery()
+                ->fetchAssociative();
+
+            if ($page) {
+                $rootLine[] = $page;
+                $currentPage = $page['pid'];
+                
+                // Si on atteint une page racine (doktype=1), on s'arrête
+                if ($page['doktype'] === 1) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        return array_reverse($rootLine);
+    }
+
+    /**
+     * Récupère toutes les pages du site à partir d'une page racine
+     */
+    private function getAllPagesFromRoot(int $rootPageUid): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction())
+            ->add(new HiddenRestriction());
+
+        // Commencer par récupérer la page racine
+        $rootPage = $queryBuilder
+            ->select('uid', 'title', 'pid', 'doktype')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'uid',
+                    $queryBuilder->createNamedParameter($rootPageUid, \PDO::PARAM_INT)
+                )
+            )
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if (!$rootPage) {
+            return [];
+        }
+
+        // Récupérer récursivement toutes les sous-pages
+        $allPages = [$rootPage];
+        $pagesToProcess = [$rootPageUid];
+
+        while (!empty($pagesToProcess)) {
+            $currentPageUids = $pagesToProcess;
+            $pagesToProcess = [];
+
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(new DeletedRestriction())
+                ->add(new HiddenRestriction());
+
+            $subPages = $queryBuilder
+                ->select('uid', 'title', 'pid', 'doktype')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->in(
+                        'pid',
+                        $queryBuilder->createNamedParameter($currentPageUids, Connection::PARAM_INT_ARRAY)
+                    )
+                )
+                ->executeQuery()
+                ->fetchAllAssociative();
+
+            foreach ($subPages as $subPage) {
+                // Ne pas inclure les pages de type shortcut, link, etc.
+                if ($subPage['doktype'] <= 4) {
+                    $allPages[] = $subPage;
+                    $pagesToProcess[] = $subPage['uid'];
+                }
+            }
+        }
+
+        return $allPages;
+    }
 
     private function getSubPages(int $pageUid): array
     {
@@ -248,91 +380,6 @@ class PageLinkService {
             ->fetchAllAssociative();
     }
 
-    private function getTypoLinks(array $pageUids): array {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tt_content');
-        $result = $queryBuilder
-            ->select('uid', 'pid', 'header', 'bodytext')
-            ->from('tt_content')
-            ->where(
-                $queryBuilder->expr()->and(
-                    $queryBuilder->expr()->in(
-                        'pid',
-                        $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
-                    ),
-                    $queryBuilder->expr()->like('bodytext', $queryBuilder->createNamedParameter('%t3://page?uid=%'))
-                )
-            )
-            ->executeQuery()
-            ->fetchAllAssociative();
-
-        $links = [];
-        foreach ($result as $content) {
-            preg_match_all('/t3:\/\/page\?uid=(\d+)/', $content['bodytext'], $matches);
-            foreach ($matches[1] as $pageUid) {
-                $links[] = [
-                    'source' => $content['pid'],
-                    'target' => (int)$pageUid,
-                    'type' => 'typolink',
-                    'element' => 'tt_content_' . $content['uid']
-                ];
-            }
-        }
-
-        return $links;
-    }
-
-    private function getMenuLinks(array $pageUids): array {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tt_content');
-        $result = $queryBuilder
-            ->select('uid', 'pid', 'pages', 'CType')
-            ->from('tt_content')
-            ->where(
-                $queryBuilder->expr()->and(
-                    $queryBuilder->expr()->in(
-                        'pid',
-                        $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
-                    ),
-                    $queryBuilder->expr()->like('CType', $queryBuilder->createNamedParameter('menu_%', \PDO::PARAM_STR))
-                )
-            )
-            ->executeQuery()
-            ->fetchAllAssociative();
-
-        $links = [];
-        foreach ($result as $content) {
-            if ($content['pages']) {
-                $pageList = GeneralUtility::trimExplode(',', $content['pages'], true);
-                foreach ($pageList as $pageUid) {
-                    $links[] = [
-                        'source' => $content['pid'],
-                        'target' => (int)$pageUid,
-                        'type' => 'menu',
-                        'element' => 'tt_content_' . $content['uid']
-                    ];
-                }
-            }
-        }
-
-        return $links;
-    }
-
-    // Les autres méthodes restent inchangées
-    private function extractHtmlLinks(string $content): array {
-        preg_match_all('/<a\s[^>]*href=([\'"])(.+?)\1[^>]*>/i', $content, $matches);
-        return $matches[2] ?? [];
-    }
-
-    private function extractPageId(string $url): int {
-        if (preg_match('/id=(\d+)/', $url, $matches)) {
-            return (int)$matches[1];
-        }
-        if (preg_match('/\/page\/(\d+)/', $url, $matches)) {
-            return (int)$matches[1];
-        }
-        return 0;
-    }
-
-
     private function formatLinksForD3(array $links): array
     {
         $nodes = [];
@@ -353,7 +400,7 @@ class PageLinkService {
 
         return [
             'nodes' => $nodes,
-            'links' => $links // Les liens sont déjà au bon format
+            'links' => $links
         ];
     }
 
