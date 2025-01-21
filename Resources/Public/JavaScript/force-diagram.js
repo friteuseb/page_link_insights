@@ -157,8 +157,9 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .on("click", function(event, d) {
                 if (event.ctrlKey || event.metaKey) {
-                    // Ouvrir la page dans TYPO3 backend
-                    const typo3Url = `/typo3/module/site/BePagesEdit?edit[pages][${d.id}]=edit`;
+                    // Récupérer le domaine courant et ouvrir la page dans le module Page de TYPO3
+                    const baseUrl = window.location.origin;
+                    const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
                     window.open(typo3Url, '_blank');
                 }
             })
