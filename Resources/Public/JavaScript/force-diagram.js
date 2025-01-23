@@ -67,13 +67,18 @@ document.addEventListener('DOMContentLoaded', function() {
             .style("padding", "10px")
             .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
 
+        // Échelle pour la taille des nœuds
+        const nodeScale = d3.scaleLinear()
+        .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
+        .range([baseNodeRadius, baseNodeRadius * 2.5]);
+
         // Définir les marqueurs pour les flèches
         svg.append("defs").selectAll("marker")
             .data(["end"])
             .join("marker")
             .attr("id", d => d)
             .attr("viewBox", "0 -5 10 10")
-            .attr("refX", d => baseNodeRadius + 10)
+            .attr("refX", d => nodeScale(d3.max(diagramData.nodes, d => d.incomingLinks)) + 10) // Ajuster refX en fonction de la taille maximale des nœuds
             .attr("refY", 0)
             .attr("markerWidth", 6)
             .attr("markerHeight", 6)
@@ -93,10 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
             'text': '#e377c2'
         };
 
-        // Échelle pour la taille des nœuds
-        const nodeScale = d3.scaleLinear()
-            .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
-            .range([baseNodeRadius, baseNodeRadius * 2.5]);
 
         const simulation = d3.forceSimulation(diagramData.nodes)
             .force("link", d3.forceLink(diagramData.links)
