@@ -48,43 +48,32 @@ class BackendController extends ActionController
     {
         $this->debug('Starting mainAction');
         
-        // Récupérer la page sélectionnée dans le page tree
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
         $this->debug('Page UID from request', $pageUid);
-            
+    
         if ($pageUid === 0) {
-            $this->debug('No page selected, showing default view');
             $this->view->assign('noPageSelected', true);
-            $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-            $moduleTemplate->setContent($this->view->render());
-            return $this->htmlResponse($moduleTemplate->renderContent());
+            $this->view->assign('data', json_encode(['nodes' => [], 'links' => []]));
+        } else {
+            try {
+                $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
+                $this->view->assign('data', json_encode($data));
+                $this->view->assign('noPageSelected', false);
+            } catch (\Exception $e) {
+                $this->debug('Error occurred', $e->getMessage());
+                $this->view->assign('data', json_encode(['nodes' => [], 'links' => []]));
+            }
         }
     
-        try {
-            // Utiliser PageLinkService pour obtenir les données
-            $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
-            $this->debug('Graph data received from PageLinkService', $data);
-    
-        } catch (\Exception $e) {
-            $this->debug('Error occurred', $e->getMessage());
-            $data = ['nodes' => [], 'links' => []];
-        }
-    
-        // Préparer la vue
-        $this->view->assign('data', json_encode($data));
-        $this->view->assign('noPageSelected', false);
-    
-        // Ajouter le debug log à la vue si le mode debug est actif
-        if ($this->debugMode) {
-            $this->view->assign('debugLog', json_encode($this->getDebugLog(), JSON_PRETTY_PRINT));
-        }
-    
-        // Rendu final
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-        $moduleTemplate->setContent($this->view->render());
-        
-        return $this->htmlResponse($moduleTemplate->renderContent());
+        $moduleTemplate->assign('view', $this->view);
+    
+        return $moduleTemplate->renderResponse('Main');
     }
+    
+    
+    
+    
 
     protected function initialize(): void
     {

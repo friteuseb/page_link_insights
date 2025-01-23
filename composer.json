@@ -3,8 +3,9 @@
     "type": "typo3-cms-extension",
     "description": "Page Link Insights",
     "license": "GPL-2.0-or-later",
+    "version": "1.0.0",
     "require": {
-        "typo3/cms-core": "^12.4"
+        "typo3/cms-core": "^12.4 || ^13.0"
     },
     "extra": {
         "typo3/cms": {
