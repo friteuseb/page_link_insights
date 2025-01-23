@@ -58,14 +58,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Créer un groupe pour le tooltip
         const tooltip = d3.select("body").append("div")
-            .attr("class", "node-tooltip")
-            .style("position", "absolute")
-            .style("visibility", "hidden")
-            .style("background-color", "white")
-            .style("border", "1px solid #ddd")
-            .style("border-radius", "4px")
-            .style("padding", "10px")
-            .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+        .attr("class", "node-tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background-color", "#333") // Fond sombre pour le tooltip
+        .style("color", "#fff") // Texte blanc pour le tooltip
+        .style("border", "1px solid #555")
+        .style("border-radius", "4px")
+        .style("padding", "10px")
+        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.3)");
 
         // Échelle pour la taille des nœuds
         const nodeScale = d3.scaleLinear()
@@ -89,13 +90,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const g = svg.append("g");
 
+        // Couleurs pour les liens
         const linkColors = {
-            'menu': '#2ca02c',
-            'menu_sitemap_pages': '#2ca02c',
-            'html': '#1f77b4',
-            'typolink': '#ff7f0e',
-            'sitemap': '#9467bd',
-            'text': '#e377c2'
+            'menu': '#4CAF50', // Vert
+            'menu_sitemap_pages': '#4CAF50',
+            'html': '#2196F3', // Bleu
+            'typolink': '#FF9800', // Orange
+            'sitemap': '#9C27B0', // Violet
+            'text': '#E91E63' // Rose
         };
 
 
@@ -108,13 +110,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .force("collide", d3.forceCollide().radius(d => nodeScale(d.incomingLinks) + 10));
 
         const link = g.append("g")
-            .attr("class", "links")
-            .selectAll("line")
-            .data(diagramData.links)
-            .join("line")
-            .attr("stroke", d => linkColors[d.contentElement?.type] || '#999')
-            .attr("stroke-width", 2)
-            .attr("marker-end", "url(#end)");
+        .attr("class", "links")
+        .selectAll("line")
+        .data(diagramData.links)
+        .join("line")
+        .attr("stroke", d => linkColors[d.contentElement?.type] || '#999')
+        .attr("stroke-width", 2)
+        .attr("marker-end", "url(#end)")
+        .attr("stroke-opacity", 0.8); // Ajouter une opacité pour une meilleure visibilité
 
         const node = g.append("g")
             .attr("class", "nodes")
@@ -124,16 +127,28 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr("class", "node")
             .call(drag(simulation));
 
+
+        // Style sombre pour le fond et les nœuds
+        svg.style("background-color", "#1e1e1e"); // Fond sombre
+
         // Cercles pour les nœuds avec taille variable
         node.append("circle")
-            .attr("r", d => nodeScale(d.incomingLinks))
-            .attr("fill", "#69b3a2");
+        .attr("r", d => nodeScale(d.incomingLinks))
+        .attr("fill", d => {
+            // Utiliser une échelle de couleur pour les nœuds
+            const colorScale = d3.scaleSequential(d3.interpolatePlasma)
+                .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)]);
+            return colorScale(d.incomingLinks);
+        })
+        .attr("stroke", "#fff") // Bordure blanche pour les nœuds
+        .attr("stroke-width", 2);
 
+        // Texte pour les nœuds
         node.append("text")
             .attr("dx", d => nodeScale(d.incomingLinks) + 5)
             .attr("dy", ".35em")
             .text(d => d.title)
-            .attr("fill", "black")
+            .attr("fill", "#fff") // Texte blanc
             .attr("font-family", "Arial")
             .attr("font-size", "12px");
 
@@ -184,10 +199,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 simulation.alpha(1).restart();
             });
 
+        // Ajouter le zoom et le déplacement
         const zoom = d3.zoom()
             .scaleExtent([0.1, 4])
             .on("zoom", (event) => {
                 g.attr("transform", event.transform);
+                // Ajuster les couleurs des éléments lors du zoom
+                link.attr("stroke", d => linkColors[d.contentElement?.type] || '#999');
+                node.select("circle").attr("fill", d => colorScale(d.incomingLinks));
             });
 
         svg.call(zoom);

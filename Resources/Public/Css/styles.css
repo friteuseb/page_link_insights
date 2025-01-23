@@ -1,0 +1,37 @@
+/* Fond sombre pour le module */
+.module {
+    background-color: #1e1e1e; /* Fond sombre */
+    color: #ffffff; /* Texte blanc */
+    padding: 15px;
+    border-radius: 8px;
+}
+
+/* Style pour le header du module */
+.module-docheader {
+    background-color: #2d2d2d; /* Fond sombre pour le header */
+    border-bottom: 1px solid #444; /* Bordure subtile */
+    padding: 10px;
+}
+
+/* Style pour le corps du module */
+.module-body {
+    background-color: #1e1e1e; /* Fond sombre pour le corps */
+    color: #ffffff; /* Texte blanc */
+    padding: 15px;
+}
+
+/* Style pour les éléments de chargement */
+.module-loading-indicator {
+    background-color: #2d2d2d; /* Fond sombre pour l'indicateur de chargement */
+    color: #ffffff; /* Texte blanc */
+}
+
+/* Style pour les tooltips */
+.node-tooltip {
+    background-color: #333; /* Fond sombre pour les tooltips */
+    color: #ffffff; /* Texte blanc */
+    border: 1px solid #555; /* Bordure subtile */
+    border-radius: 4px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Ombre légère */
+}

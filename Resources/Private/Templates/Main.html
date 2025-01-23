@@ -1,19 +1,21 @@
 <f:layout name="Default" />
 
 <f:section name="content">
+    <link rel="stylesheet" href="{f:uri.resource(path: 'Css/styles.css')}" />
+
     <div class="module">
         <div class="module-body">
             <h1>Force Diagram</h1>
-            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 150px);">
+            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 150px); background-color: #1e1e1e;">
                 <svg id="force-diagram" class="w-full h-full"></svg>
             </div>
             <pre id="diagram-data" style="display: none;"><f:format.raw value="{data}"/></pre>
 
-                        <!-- Ajoutez cette section pour afficher le JSON -->
-                        <div style="margin-top: 20px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd;">
-                            <h2>Debug JSON Data</h2>
-                            <pre><f:format.raw>{data}</f:format.raw></pre>
-                        </div>
+            <!-- Ajoutez cette section pour afficher le JSON -->
+            <div style="margin-top: 20px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd;">
+                <h2>Debug JSON Data</h2>
+                <pre><f:format.raw>{data}</f:format.raw></pre>
+            </div>
                         
         </div>
     </div>
