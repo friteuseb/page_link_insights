@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Script starting...');
     
     const dataElement = document.getElementById('diagram-data');
+    console.log('Raw content:', dataElement.textContent.trim());
     if (!dataElement) {
         console.error('diagram-data element not found');
         return;

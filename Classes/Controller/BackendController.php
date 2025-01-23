@@ -46,33 +46,27 @@ class BackendController extends ActionController
 
     public function mainAction(): ResponseInterface
     {
-        $this->debug('Starting mainAction');
-        
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
-        $this->debug('Page UID from request', $pageUid);
-    
+        
         if ($pageUid === 0) {
-            $this->view->assign('noPageSelected', true);
-            $this->view->assign('data', json_encode(['nodes' => [], 'links' => []]));
+            $data = ['nodes' => [], 'links' => []];
         } else {
             try {
                 $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
-                $this->view->assign('data', json_encode($data));
-                $this->view->assign('noPageSelected', false);
             } catch (\Exception $e) {
-                $this->debug('Error occurred', $e->getMessage());
-                $this->view->assign('data', json_encode(['nodes' => [], 'links' => []]));
+                $this->debug('Error: ' . $e->getMessage());
+                $data = ['nodes' => [], 'links' => []];
             }
         }
     
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-        $moduleTemplate->assign('view', $this->view);
+        $moduleTemplate->assignMultiple([
+            'data' => json_encode($data),
+            'noPageSelected' => ($pageUid === 0),
+        ]);
     
         return $moduleTemplate->renderResponse('Main');
     }
-    
-    
-    
     
 
     protected function initialize(): void
