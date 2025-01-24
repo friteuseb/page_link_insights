@@ -1,41 +1,42 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Script starting...');
-    
+
     const dataElement = document.getElementById('diagram-data');
-    console.log('Raw content:', dataElement.textContent.trim());
     if (!dataElement) {
         console.error('diagram-data element not found');
         return;
     }
-    
+
     try {
         const diagramData = JSON.parse(dataElement.textContent.trim());
         console.log('Parsed data:', diagramData);
-        
+
         // Calculer le nombre de liens entrants pour chaque nœud
         const incomingLinks = {};
         diagramData.nodes.forEach(node => {
             incomingLinks[node.id] = 0;
         });
-        
+
         diagramData.links.forEach(link => {
             incomingLinks[link.targetPageId] = (incomingLinks[link.targetPageId] || 0) + 1;
         });
-        
+
         // Ajouter le nombre de liens entrants à chaque nœud
         diagramData.nodes = diagramData.nodes.map(node => ({
             ...node,
             incomingLinks: incomingLinks[node.id] || 0
         }));
-        
-        diagramData.links = diagramData.links.map(link => ({
-            source: link.sourcePageId,
-            target: link.targetPageId,
-            contentElement: link.contentElement
+
+        // Formater les liens pour la simulation
+        const links = diagramData.links.map(link => ({
+            source: link.sourcePageId, // Assurez-vous que c'est une chaîne ou un nombre
+            target: link.targetPageId, // Assurez-vous que c'est une chaîne ou un nombre
+            contentElement: link.contentElement,
+            broken: link.broken
         }));
-        
-        console.log('Processed links:', diagramData.links);
-        
+
+        console.log('Processed links:', links);
+
         const svgElement = document.getElementById('force-diagram');
         if (!svgElement) {
             console.error('force-diagram SVG element not found');
@@ -54,25 +55,28 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr("width", "100%")
             .attr("height", "100%")
             .attr("viewBox", [0, 0, width, height]);
-            
+
         console.log('SVG configured');
 
         // Créer un groupe pour le tooltip
         const tooltip = d3.select("body").append("div")
-        .attr("class", "node-tooltip")
-        .style("position", "absolute")
-        .style("visibility", "hidden")
-        .style("background-color", "#333") // Fond sombre pour le tooltip
-        .style("color", "#fff") // Texte blanc pour le tooltip
-        .style("border", "1px solid #555")
-        .style("border-radius", "4px")
-        .style("padding", "10px")
-        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.3)");
+            .attr("class", "node-tooltip")
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("background-color", "#333")
+            .style("color", "#fff")
+            .style("border", "1px solid #555")
+            .style("border-radius", "4px")
+            .style("padding", "10px")
+            .style("box-shadow", "0 2px 4px rgba(0,0,0,0.3)");
+
+        // Initialiser le groupe `g` pour les éléments du diagramme
+        const g = svg.append("g");
 
         // Échelle pour la taille des nœuds
         const nodeScale = d3.scaleLinear()
-        .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
-        .range([baseNodeRadius, baseNodeRadius * 2.5]);
+            .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
+            .range([baseNodeRadius, baseNodeRadius * 2.5]);
 
         // Définir les marqueurs pour les flèches
         svg.append("defs").selectAll("marker")
@@ -80,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .join("marker")
             .attr("id", d => d)
             .attr("viewBox", "0 -5 10 10")
-            .attr("refX", d => nodeScale(d3.max(diagramData.nodes, d => d.incomingLinks)) + 10) // Ajuster refX en fonction de la taille maximale des nœuds
+            .attr("refX", d => nodeScale(d3.max(diagramData.nodes, d => d.incomingLinks)) + 10)
             .attr("refY", 0)
             .attr("markerWidth", 6)
             .attr("markerHeight", 6)
@@ -88,8 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .append("path")
             .attr("d", "M0,-5L10,0L0,5")
             .attr("fill", "#999");
-
-        const g = svg.append("g");
 
         // Couleurs pour les liens
         const linkColors = {
@@ -101,25 +103,53 @@ document.addEventListener('DOMContentLoaded', function() {
             'text': '#E91E63' // Rose
         };
 
+        // Filtrer les liens brisés
+        const validLinks = links.filter(link => 
+            diagramData.nodes.some(node => node.id === link.source) &&
+            diagramData.nodes.some(node => node.id === link.target)
+        );
 
+        console.log('Valid links:', validLinks);
+
+        // Créer la simulation de forces
         const simulation = d3.forceSimulation(diagramData.nodes)
-            .force("link", d3.forceLink(diagramData.links)
+            .force("link", d3.forceLink(validLinks) // Utiliser uniquement les liens valides
                 .id(d => d.id)
                 .distance(150))
             .force("charge", d3.forceManyBody().strength(-1000))
             .force("center", d3.forceCenter(width / 2, height / 2))
             .force("collide", d3.forceCollide().radius(d => nodeScale(d.incomingLinks) + 10));
 
+        // Créer les liens
         const link = g.append("g")
-        .attr("class", "links")
-        .selectAll("line")
-        .data(diagramData.links)
-        .join("line")
-        .attr("stroke", d => linkColors[d.contentElement?.type] || '#999')
-        .attr("stroke-width", 2)
-        .attr("marker-end", "url(#end)")
-        .attr("stroke-opacity", 0.8); // Ajouter une opacité pour une meilleure visibilité
+            .attr("class", "links")
+            .selectAll("line")
+            .data(validLinks)
+            .join("line")
+            .attr("stroke", d => d.broken ? "#ff0000" : linkColors[d.contentElement?.type] || '#999')
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", d => d.broken ? "5,5" : null)
+            .attr("marker-end", d => d.broken ? null : "url(#end)")
+            .on("mouseover", function(event, d) {
+                if (d.broken) {
+                    tooltip.style("visibility", "visible")
+                        .html(`
+                            <strong>Lien brisé</strong><br>
+                            Source: ${d.source}<br>
+                            Cible: ${d.target}<br>
+                            <em>La page cible n'existe pas.</em>
+                        `);
+                }
+            })
+            .on("mousemove", function(event) {
+                tooltip.style("top", (event.pageY + 10) + "px")
+                    .style("left", (event.pageX + 10) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.style("visibility", "hidden");
+            });
 
+        // Créer les nœuds
         const node = g.append("g")
             .attr("class", "nodes")
             .selectAll("g")
@@ -128,19 +158,18 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr("class", "node")
             .call(drag(simulation));
 
-
         // Style sombre pour le fond et les nœuds
         svg.style("background-color", "#1e1e1e"); // Fond sombre
+
+
+        // Définir l'échelle de couleur au niveau supérieur
+        const colorScale = d3.scaleSequential(d3.interpolatePlasma)
+        .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)]);
 
         // Cercles pour les nœuds avec taille variable
         node.append("circle")
         .attr("r", d => nodeScale(d.incomingLinks))
-        .attr("fill", d => {
-            // Utiliser une échelle de couleur pour les nœuds
-            const colorScale = d3.scaleSequential(d3.interpolatePlasma)
-                .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)]);
-            return colorScale(d.incomingLinks);
-        })
+        .attr("fill", d => colorScale(d.incomingLinks)) // Utiliser l'échelle de couleur
         .attr("stroke", "#fff") // Bordure blanche pour les nœuds
         .attr("stroke-width", 2);
 
@@ -153,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr("font-family", "Arial")
             .attr("font-size", "12px");
 
-        // Gestion des événements
+        // Gestion des événements pour les nœuds
         node
             .on("mouseover", function(event, d) {
                 tooltip.style("visibility", "visible")
@@ -182,21 +211,30 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .on("contextmenu", function(event, d) {
                 event.preventDefault();
-                
-                // Supprimer le nœud et ses liens associés
-                diagramData.links = diagramData.links.filter(l => 
-                    l.source.id !== d.id && l.target.id !== d.id
+
+                // Supprimer uniquement le nœud cliqué
+                diagramData.nodes = diagramData.nodes.filter(node => node.id !== d.id);
+            
+                // Supprimer uniquement les liens connectés au nœud cliqué
+                diagramData.links = diagramData.links.filter(link => 
+                    link.source !== d.id && link.target !== d.id
                 );
-                diagramData.nodes = diagramData.nodes.filter(n => n.id !== d.id);
-                
-                // Mettre à jour la simulation
+            
+                // Filtrer les liens valides après suppression
+                const validLinks = diagramData.links.filter(link => 
+                    diagramData.nodes.some(node => node.id === link.source) &&
+                    diagramData.nodes.some(node => node.id === link.target)
+                );
+            
+                // Mettre à jour la simulation avec les nœuds et liens restants
                 simulation.nodes(diagramData.nodes);
-                simulation.force("link").links(diagramData.links);
-                
+                simulation.force("link").links(validLinks);
+            
                 // Mettre à jour le rendu
-                node.data(diagramData.nodes, d => d.id).exit().remove();
-                link.data(diagramData.links).exit().remove();
-                
+                node.data(diagramData.nodes, node => node.id).exit().remove();
+                link.data(validLinks).exit().remove(); // Utiliser validLinks pour les liens
+            
+                // Redémarrer la simulation
                 simulation.alpha(1).restart();
             });
 
@@ -207,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 g.attr("transform", event.transform);
                 // Ajuster les couleurs des éléments lors du zoom
                 link.attr("stroke", d => linkColors[d.contentElement?.type] || '#999');
-                node.select("circle").attr("fill", d => colorScale(d.incomingLinks));
+                node.select("circle").attr("fill", d => colorScale(d.incomingLinks)); // Utiliser colorScale
             });
 
         svg.call(zoom);
@@ -246,9 +284,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 .on("drag", dragged)
                 .on("end", dragended);
         }
-        
+
         console.log('Setup complete');
-        
+
     } catch (error) {
         console.error('Error setting up diagram:', error);
     }
