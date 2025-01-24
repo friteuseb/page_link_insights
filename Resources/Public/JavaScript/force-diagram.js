@@ -95,14 +95,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Couleurs pour les liens
         const linkColors = {
-            'menu': '#4CAF50', // Vert
-            'menu_sitemap_pages': '#4CAF50',
-            'html': '#2196F3', // Bleu
-            'typolink': '#FF9800', // Orange
-            'sitemap': '#9C27B0', // Violet
-            'text': '#E91E63' // Rose
+            'menu': '#00ffff', // Cyan
+            'menu_sitemap_pages': '#00ffff',
+            'html': '#ff00ff', // Magenta
+            'typolink': '#ffcc00', // Jaune électrique
+            'sitemap': '#cc00ff', // Violet électrique
+            'text': '#00ffcc' // Cyan clair
         };
-
         // Filtrer les liens brisés
         const validLinks = links.filter(link => 
             diagramData.nodes.some(node => node.id === link.source) &&
@@ -162,25 +161,28 @@ document.addEventListener('DOMContentLoaded', function() {
         svg.style("background-color", "#1e1e1e"); // Fond sombre
 
 
-        // Définir l'échelle de couleur au niveau supérieur
-        const colorScale = d3.scaleSequential(d3.interpolatePlasma)
-        .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)]);
+        const electricGradient = d3.interpolateHcl("#00ffff", "#ff00ff"); // Bleu électrique à violet
+
+        const colorScale = d3.scaleSequential(electricGradient)
+            .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)]);
 
         // Cercles pour les nœuds avec taille variable
         node.append("circle")
-        .attr("r", d => nodeScale(d.incomingLinks))
-        .attr("fill", d => colorScale(d.incomingLinks)) // Utiliser l'échelle de couleur
-        .attr("stroke", "#fff") // Bordure blanche pour les nœuds
-        .attr("stroke-width", 2);
+            .attr("r", d => nodeScale(d.incomingLinks))
+            .attr("fill", "#003300") // Vert Matrix foncé
+            .attr("stroke", "#00ff00") // Bordure verte fluo
+            .attr("stroke-width", 2); // Épaisseur de la bordure
 
-        // Texte pour les nœuds
-        node.append("text")
-            .attr("dx", d => nodeScale(d.incomingLinks) + 5)
-            .attr("dy", ".35em")
-            .text(d => d.title)
-            .attr("fill", "#fff") // Texte blanc
-            .attr("font-family", "Arial")
-            .attr("font-size", "12px");
+            const isDarkBackground = true; // ou une logique pour détecter le fond
+
+            // Texte pour les nœuds
+            node.append("text")
+                .attr("dx", d => nodeScale(d.incomingLinks) + 5)
+                .attr("dy", ".35em")
+                .text(d => d.title)
+                .attr("fill", "#00ff00") // Texte vert fluo
+                .attr("font-family", "Arial")
+                .attr("font-size", "12px");
 
         // Gestion des événements pour les nœuds
         node
@@ -209,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.open(typo3Url, '_blank');
             }
         })
-        
+
         .on("contextmenu", function(event, d) {
             event.preventDefault();
         
@@ -268,15 +270,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Ajouter le zoom et le déplacement
         const zoom = d3.zoom()
-            .scaleExtent([0.1, 4])
-            .on("zoom", (event) => {
-                g.attr("transform", event.transform);
-                // Ajuster les couleurs des éléments lors du zoom
-                link.attr("stroke", d => linkColors[d.contentElement?.type] || '#999');
-                node.select("circle").attr("fill", d => colorScale(d.incomingLinks)); // Utiliser colorScale
-            });
-
-        svg.call(zoom);
+        .scaleExtent([0.1, 4])
+        .on("zoom", (event) => {
+            g.attr("transform", event.transform); // Appliquer uniquement la transformation
+        });
+    
+    svg.call(zoom);
 
         simulation.on("tick", () => {
             link
@@ -288,6 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
             node
                 .attr("transform", d => `translate(${d.x},${d.y})`);
         });
+        
 
         function drag(simulation) {
             function dragstarted(event) {
