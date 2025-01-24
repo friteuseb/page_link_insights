@@ -47,14 +47,16 @@ class BackendController extends ActionController
     public function mainAction(): ResponseInterface
     {
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
-        
+        error_log('BackendController - Page UID: ' . $pageUid);
+    
         if ($pageUid === 0) {
             $data = ['nodes' => [], 'links' => []];
         } else {
             try {
+                error_log('BackendController - Calling PageLinkService');
                 $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
             } catch (\Exception $e) {
-                $this->debug('Error: ' . $e->getMessage());
+                error_log('BackendController - Error: ' . $e->getMessage());
                 $data = ['nodes' => [], 'links' => []];
             }
         }

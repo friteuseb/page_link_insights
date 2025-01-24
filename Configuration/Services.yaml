@@ -6,12 +6,12 @@ services:
 
   Cwolf\PageLinkInsights\:
     resource: '../Classes/*'
-    
+    exclude:
+      - '../Classes/Domain/Model/*'
+
   Cwolf\PageLinkInsights\Controller\BackendController:
+    tags: ['backend.controller']
+    
+  # Service explicitement configuré
+  Cwolf\PageLinkInsights\Service\PageLinkService:
     public: true
-    arguments:
-      $moduleTemplateFactory: '@TYPO3\CMS\Backend\Template\ModuleTemplateFactory'
-      $pageRenderer: '@TYPO3\CMS\Core\Page\PageRenderer'
-      $pageRepository: '@TYPO3\CMS\Core\Domain\Repository\PageRepository'
-      $extensionConfiguration: '@TYPO3\CMS\Core\Configuration\ExtensionConfiguration'
-      $pageLinkService: '@Cwolf\PageLinkInsights\Service\PageLinkService'
