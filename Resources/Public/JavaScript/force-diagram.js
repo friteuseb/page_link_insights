@@ -184,59 +184,87 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Gestion des événements pour les nœuds
         node
-            .on("mouseover", function(event, d) {
-                tooltip.style("visibility", "visible")
-                    .html(`
-                        <strong>${d.title}</strong><br>
-                        ID: ${d.id}<br>
-                        Liens entrants: ${d.incomingLinks}<br>
-                        <em>Ctrl+Clic pour ouvrir dans TYPO3<br>
-                        Clic droit pour supprimer</em>
-                    `);
-            })
-            .on("mousemove", function(event) {
-                tooltip.style("top", (event.pageY + 10) + "px")
-                    .style("left", (event.pageX + 10) + "px");
-            })
-            .on("mouseout", function() {
-                tooltip.style("visibility", "hidden");
-            })
-            .on("click", function(event, d) {
-                if (event.ctrlKey || event.metaKey) {
-                    // Récupérer le domaine courant et ouvrir la page dans le module Page de TYPO3
-                    const baseUrl = window.location.origin;
-                    const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
-                    window.open(typo3Url, '_blank');
-                }
-            })
-            .on("contextmenu", function(event, d) {
-                event.preventDefault();
-
-                // Supprimer uniquement le nœud cliqué
-                diagramData.nodes = diagramData.nodes.filter(node => node.id !== d.id);
+        .on("mouseover", function(event, d) {
+            tooltip.style("visibility", "visible")
+                .html(`
+                    <strong>${d.title}</strong><br>
+                    ID: ${d.id}<br>
+                    Liens entrants: ${d.incomingLinks}<br>
+                    <em>Ctrl+Clic pour ouvrir dans TYPO3<br>
+                    Clic droit pour supprimer</em>
+                `);
+        })
+        .on("mousemove", function(event) {
+            tooltip.style("top", (event.pageY + 10) + "px")
+                .style("left", (event.pageX + 10) + "px");
+        })
+        .on("mouseout", function() {
+            tooltip.style("visibility", "hidden");
+        })
+        .on("click", function(event, d) {
+            if (event.ctrlKey || event.metaKey) {
+                // Récupérer le domaine courant et ouvrir la page dans le module Page de TYPO3
+                const baseUrl = window.location.origin;
+                const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
+                window.open(typo3Url, '_blank');
+            }
+        })
+        
+        .on("contextmenu", function(event, d) {
+            event.preventDefault();
+        
+            // 1. Supprimer le nœud
+            diagramData.nodes = diagramData.nodes.filter(node => node.id !== d.id);
+        
+            // 2. Supprimer les liens connectés au nœud
+            diagramData.links = diagramData.links.filter(link => 
+                link.sourcePageId !== d.id && link.targetPageId !== d.id
+            );
+        
+            // 3. Créer les objets de liens appropriés pour D3
+            const d3Links = diagramData.links.map(link => ({
+                source: diagramData.nodes.find(node => node.id === link.sourcePageId),
+                target: diagramData.nodes.find(node => node.id === link.targetPageId),
+                contentElement: link.contentElement,
+                broken: link.broken
+            })).filter(link => link.source && link.target); // Filtrer les liens avec des nœuds manquants
+        
+            // 4. Mettre à jour les sélections D3
+            // Mise à jour des nœuds
+            const nodeSelection = g.selectAll('.node')
+                .data(diagramData.nodes, node => node.id);
             
-                // Supprimer uniquement les liens connectés au nœud cliqué
-                diagramData.links = diagramData.links.filter(link => 
-                    link.source !== d.id && link.target !== d.id
-                );
+            nodeSelection.exit().remove();
             
-                // Filtrer les liens valides après suppression
-                const validLinks = diagramData.links.filter(link => 
-                    diagramData.nodes.some(node => node.id === link.source) &&
-                    diagramData.nodes.some(node => node.id === link.target)
-                );
+            // Mise à jour des liens
+            const linkSelection = g.selectAll('line')
+                .data(d3Links);
             
-                // Mettre à jour la simulation avec les nœuds et liens restants
-                simulation.nodes(diagramData.nodes);
-                simulation.force("link").links(validLinks);
-            
-                // Mettre à jour le rendu
-                node.data(diagramData.nodes, node => node.id).exit().remove();
-                link.data(validLinks).exit().remove(); // Utiliser validLinks pour les liens
-            
-                // Redémarrer la simulation
-                simulation.alpha(1).restart();
-            });
+            linkSelection.exit().remove();
+        
+            // 5. Mettre à jour la simulation
+            simulation.nodes(diagramData.nodes);
+            simulation.force("link").links(d3Links);
+        
+            // 6. Redémarrer la simulation
+            simulation.alpha(1).restart();
+        
+            // Debug
+            console.log("Nodes après suppression:", diagramData.nodes);
+            console.log("Liens après suppression:", d3Links);
+        });
+        
+        // Mettre à jour la fonction tick pour utiliser les bonnes références
+        simulation.on("tick", () => {
+            g.selectAll("line")
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+        
+            g.selectAll(".node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+        });
 
         // Ajouter le zoom et le déplacement
         const zoom = d3.zoom()
