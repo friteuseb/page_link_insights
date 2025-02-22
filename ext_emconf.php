@@ -1,8 +1,8 @@
 <?php
 
-$EM_CONF[$_EXTKEY] = [
+$EM_CONF['page_link_insights'] = [
     'title' => 'Page Link Insights',
-    'description' => 'A demo TYPO3 extension that adds a backend module with a D3.js force diagram visualization.',
+    'description' => 'A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships.',
     'category' => 'module',
     'state' => 'stable',
     'clearCacheOnLoad' => true,
