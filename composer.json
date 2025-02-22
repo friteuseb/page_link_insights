@@ -9,7 +9,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Cwolf\\PageLinkInsights\\": "Classes/"
+            "Cywolf\\PageLinkInsights\\": "Classes/"
         }
     },
     "extra": {
