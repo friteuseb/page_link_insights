@@ -3,18 +3,21 @@
     "type": "typo3-cms-extension",
     "description": "A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships",
     "license": "GPL-2.0-or-later",
-    "version": "1.0.0",
     "require": {
-        "typo3/cms-core": "^12.4 || ^13.0"
+        "typo3/cms-core": "^13.0",
+        "php": ">=8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cwolf\\PageLinkInsights\\": "Classes/"
+        }
     },
     "extra": {
         "typo3/cms": {
             "extension-key": "page_link_insights"
         }
     },
-    "autoload": {
-        "psr-4": {
-            "Cywolf\\PageLinkInsights\\": "Classes/"
-        }
-    }
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "version": "1.0.2"
 }

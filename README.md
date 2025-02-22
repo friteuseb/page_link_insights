@@ -48,15 +48,14 @@ The force-directed visualization provides crucial insights into your content str
 
 ## Requirements
 
-- TYPO3 v12 LTS or v13
-- PHP 8.1 or higher
+- TYPO3 V13
 
 ## Installation
 
 ### Via Composer
 
 ```bash
-composer require Cywolf/page-link-insights
+composer require cywolf/page-link-insights
 ```
 
 ### Via TYPO3 Extension Manager
