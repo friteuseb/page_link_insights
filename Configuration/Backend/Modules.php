@@ -12,7 +12,7 @@ return [
         'navigationComponentId' => 'TYPO3/CMS/Backend/PageTree/PageTreeElement',
         'extensionName' => 'PageLinkInsights',
         'controllerActions' => [
-            \Cwolf\PageLinkInsights\Controller\BackendController::class => [
+            \Cywolf\PageLinkInsights\Controller\BackendController::class => [
                 'main'
             ],
         ],

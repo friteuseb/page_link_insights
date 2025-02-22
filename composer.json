@@ -1,5 +1,5 @@
 {
-    "name": "cwolf/page_link_insights",
+    "name": "cywolf/page_link_insights",
     "type": "typo3-cms-extension",
     "description": "A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships",
     "license": "GPL-2.0-or-later",
@@ -14,7 +14,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Cwolf\\PageLinkInsights\\": "Classes/"
+            "Cywolf\\PageLinkInsights\\": "Classes/"
         }
     }
 }

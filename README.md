@@ -56,7 +56,7 @@ The force-directed visualization provides crucial insights into your content str
 ### Via Composer
 
 ```bash
-composer require cwolf/page-link-insights
+composer require Cywolf/page-link-insights
 ```
 
 ### Via TYPO3 Extension Manager

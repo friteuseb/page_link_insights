@@ -1,6 +1,6 @@
 <?php
 
-namespace Cwolf\PageLinkInsights\Controller;
+namespace Cywolf\PageLinkInsights\Controller;
 
 use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
@@ -12,7 +12,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
-use Cwolf\PageLinkInsights\Service\PageLinkService;
+use Cywolf\PageLinkInsights\Service\PageLinkService;
 
 class BackendController extends ActionController
 {

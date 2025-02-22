@@ -4,14 +4,14 @@ services:
     autoconfigure: true
     public: false
 
-  Cwolf\PageLinkInsights\:
+  Cywolf\PageLinkInsights\:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Domain/Model/*'
 
-  Cwolf\PageLinkInsights\Controller\BackendController:
+  Cywolf\PageLinkInsights\Controller\BackendController:
     tags: ['backend.controller']
     
   # Service explicitement configuré
-  Cwolf\PageLinkInsights\Service\PageLinkService:
+  Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
