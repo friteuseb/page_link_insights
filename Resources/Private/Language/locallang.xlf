@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="EXT:page_link_insights/Resources/Private/Language/locallang.xlf" date="2024-02-22T12:00:00Z" product-name="page_link_insights">
+        <header/>
+        <body>
+            <trans-unit id="task.analyzeLinks.title">
+                <source>Analyze Internal Links</source>
+            </trans-unit>
+            <trans-unit id="task.analyzeLinks.description">
+                <source>Analyzes internal links and calculates PageRank and other metrics</source>
+            </trans-unit>
+            <trans-unit id="task.field.rootPageId">
+                <source>Root Page ID</source>
+            </trans-unit>
+            <trans-unit id="task.error.invalidRootPage">
+                <source>Please enter a valid root page ID (must be greater than 0)</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

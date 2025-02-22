@@ -15,3 +15,16 @@ services:
   # Service explicitement configuré
   Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
+
+  
+  Cywolf\PageLinkInsights\Service\PageMetricsService:
+    public: true
+    arguments:
+      $pageLinkService: '@Cywolf\PageLinkInsights\Service\PageLinkService'
+
+  Cywolf\PageLinkInsights\Task\AnalyzeLinksTask:
+    public: true
+    tags:
+      - name: 'scheduler.task'
+        title: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.title'
+        description: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.description'
