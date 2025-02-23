@@ -28,6 +28,36 @@ The `Configuration/TypoScript/setup.typoscript` file has been created with:
 - Scoring configuration
 - Sorting options
 
+Add this configuration to your site's TypoScript setup (Site Management > Sites > Your Site > TypoScript):
+
+```typoscript
+plugin.tx_solr {
+    index {
+        queue {
+            pages {
+                dataProcessing {
+                    1 = Cywolf\PageLinkInsights\Solr\PageMetricsProcessor
+                }
+                fields {
+                    pagerank_f = float
+                    inbound_links_i = integer
+                    centrality_f = float
+                }
+            }
+        }
+    }
+    search {
+        # Customize scoring per site
+        relevance {
+            multiplier {
+                pagerank = 2.0    # Adjust to control PageRank influence
+                inboundLinks = 1.5 # Adjust to control inbound links influence
+            }
+        }
+    }
+}
+```
+
 3. **Installation Verification**
 
 - Clear all TYPO3 caches
@@ -76,13 +106,13 @@ A new "Page Rank" sort is available in the result sorting options.
 
 ### Adjusting Multipliers
 
-Modify values in TypoScript:
+
+You can customize the influence of different factors by adjusting the multipliers in your site's TypoScript:
+
 ```typoscript
-relevance {
-    multiplier {
-        pagerank = 2.0    # Increase to give more weight to PageRank
-        inboundLinks = 1.5 # Adjust according to inbound links importance
-    }
+plugin.tx_solr.search.relevance.multiplier {
+    pagerank = 3.0     # Increase to give more weight to PageRank
+    inboundLinks = 1.0 # Decrease to reduce influence of inbound links
 }
 ```
 
