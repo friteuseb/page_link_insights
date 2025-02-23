@@ -26,7 +26,7 @@ class PageMetricsService {
         // Sauvegarder les données
         $this->persistPageMetrics($pageMetrics);
         $this->persistLinkData($networkData['links']);
-        $this->persistGlobalStats($globalStats);
+        $this->persistGlobalStats($globalStats, $rootPageId);
     }
     
     private function calculatePageMetrics(array $networkData): array {
@@ -198,7 +198,8 @@ class PageMetricsService {
         }
     }
     
-    private function persistGlobalStats(array $stats): void {
+    private function persistGlobalStats(array $stats, int $rootPageId): void
+    {
         $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_statistics');
         $currentTime = time();
         
@@ -207,7 +208,8 @@ class PageMetricsService {
             array_merge($stats, [
                 'pid' => 0,
                 'tstamp' => $currentTime,
-                'crdate' => $currentTime
+                'crdate' => $currentTime,
+                'site_root' => $rootPageId
             ])
         );
     }

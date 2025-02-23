@@ -51,25 +51,74 @@ class BackendController extends ActionController
     
         if ($pageUid === 0) {
             $data = ['nodes' => [], 'links' => []];
+            $kpis = [];
         } else {
             try {
                 error_log('BackendController - Calling PageLinkService');
                 $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
+                $kpis = $this->getPageKPIs($pageUid);
             } catch (\Exception $e) {
                 error_log('BackendController - Error: ' . $e->getMessage());
                 $data = ['nodes' => [], 'links' => []];
+                $kpis = [];
             }
         }
     
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->assignMultiple([
             'data' => json_encode($data),
+            'kpis' => $kpis,
             'noPageSelected' => ($pageUid === 0),
         ]);
     
         return $moduleTemplate->renderResponse('Main');
     }
-    
+
+    protected function getPageKPIs(int $pageUid): array
+    {
+        $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
+        
+        // Récupérer la dernière analyse effectuée (la plus récente)
+        $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_statistics');
+        $statistics = $queryBuilder
+            ->select('*')
+            ->from('tx_pagelinkinsights_statistics')
+            ->orderBy('tstamp', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        $this->debug('Statistics Data', $statistics);
+
+        // Si nous avons des statistiques, les renvoyer, sinon retourner des valeurs par défaut
+        if ($statistics) {
+            return [
+                'site' => [
+                    'siteRoot' => $statistics['site_root'],
+                    'totalPages' => $statistics['total_pages'],
+                    'totalLinks' => $statistics['total_links'],
+                    'brokenLinksCount' => $statistics['broken_links_count'],
+                    'orphanedPages' => $statistics['orphaned_pages'],
+                    'avgLinksPerPage' => round($statistics['avg_links_per_page'], 2),
+                    'networkDensity' => round($statistics['network_density'], 4),
+                    'lastUpdate' => date('d/m/Y H:i', $statistics['tstamp'])
+                ]
+            ];
+        }
+
+        return [
+            'site' => [
+                'siteRoot' => 0,
+                'totalPages' => 0,
+                'totalLinks' => 0,
+                'brokenLinksCount' => 0,
+                'orphanedPages' => 0,
+                'avgLinksPerPage' => 0,
+                'networkDensity' => 0,
+                'lastUpdate' => '-'
+            ]
+        ];
+    }
 
     protected function initialize(): void
     {
