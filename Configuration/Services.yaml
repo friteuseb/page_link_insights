@@ -12,11 +12,9 @@ services:
   Cywolf\PageLinkInsights\Controller\BackendController:
     tags: ['backend.controller']
     
-  # Service explicitement configuré
   Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
 
-  
   Cywolf\PageLinkInsights\Service\PageMetricsService:
     public: true
     arguments:
@@ -28,3 +26,7 @@ services:
       - name: 'scheduler.task'
         title: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.title'
         description: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.description'
+  
+  Cywolf\PageLinkInsights\Service\ThemeDataService:
+    public: true
+    # Pas besoin de définir explicitement les arguments car autowire: true les gérera

@@ -65,3 +65,59 @@ CREATE TABLE tx_pagelinkinsights_statistics (
     KEY parent (pid),
     KEY site (site_root)
 );
+
+
+CREATE TABLE tx_pagelinkinsights_keywords (
+    uid int(11) NOT NULL auto_increment,
+    pid int(11) DEFAULT '0' NOT NULL,
+    tstamp int(11) DEFAULT '0' NOT NULL,
+    crdate int(11) DEFAULT '0' NOT NULL,
+    
+    page_uid int(11) DEFAULT '0' NOT NULL,
+    keyword varchar(255) DEFAULT '' NOT NULL,
+    frequency int(11) DEFAULT '0' NOT NULL,
+    weight double(11,2) DEFAULT '0.00' NOT NULL,
+    language int(11) DEFAULT '0' NOT NULL,
+    content_type varchar(50) DEFAULT '' NOT NULL, 
+    
+    PRIMARY KEY (uid),
+    KEY parent (pid),
+    KEY page (page_uid),
+    KEY keyword (keyword),
+    KEY language (language)
+);
+
+
+CREATE TABLE tx_pagelinkinsights_themes (
+    uid int(11) NOT NULL auto_increment,
+    pid int(11) DEFAULT '0' NOT NULL,
+    tstamp int(11) DEFAULT '0' NOT NULL,
+    crdate int(11) DEFAULT '0' NOT NULL,
+    
+    theme_name varchar(255) DEFAULT '' NOT NULL,
+    keywords text,
+    weight double(11,2) DEFAULT '0.00' NOT NULL,
+    language int(11) DEFAULT '0' NOT NULL,
+    
+    PRIMARY KEY (uid),
+    KEY parent (pid),
+    KEY theme (theme_name),
+    KEY language (language)
+);
+
+
+CREATE TABLE tx_pagelinkinsights_page_themes (
+    uid int(11) NOT NULL auto_increment,
+    pid int(11) DEFAULT '0' NOT NULL,
+    tstamp int(11) DEFAULT '0' NOT NULL,
+    crdate int(11) DEFAULT '0' NOT NULL,
+    
+    page_uid int(11) DEFAULT '0' NOT NULL,
+    theme_uid int(11) DEFAULT '0' NOT NULL,
+    relevance double(11,2) DEFAULT '0.00' NOT NULL,
+    
+    PRIMARY KEY (uid),
+    KEY parent (pid),
+    KEY page (page_uid),
+    KEY theme (theme_uid)
+);

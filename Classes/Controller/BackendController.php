@@ -13,6 +13,7 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use Cywolf\PageLinkInsights\Service\PageLinkService;
+use Cywolf\PageLinkInsights\Service\ThemeDataService;
 
 class BackendController extends ActionController
 {
@@ -24,7 +25,9 @@ class BackendController extends ActionController
         private readonly PageRenderer $pageRenderer,
         private readonly PageRepository $pageRepository,
         private readonly ExtensionConfiguration $extensionConfiguration,
-        private readonly PageLinkService $pageLinkService
+        private readonly PageLinkService $pageLinkService,
+        private readonly ThemeDataService $themeDataService 
+
     ) {
     }
 
@@ -44,6 +47,7 @@ class BackendController extends ActionController
         );
     }
 
+    
     public function mainAction(): ResponseInterface
     {
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
