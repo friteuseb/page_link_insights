@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Formater les liens pour la simulation
         const links = diagramData.links.map(link => ({
-            source: link.sourcePageId, // Assurez-vous que c'est une chaîne ou un nombre
-            target: link.targetPageId, // Assurez-vous que c'est une chaîne ou un nombre
+            source: link.sourcePageId, 
+            target: link.targetPageId, 
             contentElement: link.contentElement,
             broken: link.broken
         }));
@@ -78,6 +78,18 @@ document.addEventListener('DOMContentLoaded', function() {
             .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
             .range([baseNodeRadius, baseNodeRadius * 2.5]);
 
+        // Calculer une couleur basée sur le thème principal de la page
+        const themeColorScale = d3.scaleOrdinal()
+            .range(d3.schemeCategory10); // Palette de couleurs prédéfinie
+
+        // Extraire tous les thèmes uniques pour la palette de couleurs
+        const uniqueThemes = Array.from(new Set(
+            diagramData.nodes
+                .filter(node => node.mainTheme && node.mainTheme.name)
+                .map(node => node.mainTheme.name)
+        ));
+        themeColorScale.domain(uniqueThemes);
+
         // Définir les marqueurs pour les flèches
         svg.append("defs").selectAll("marker")
             .data(["end"])
@@ -102,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'sitemap': '#cc00ff', // Violet électrique
             'text': '#00ffcc' // Cyan clair
         };
+        
         // Filtrer les liens brisés
         const validLinks = links.filter(link => 
             diagramData.nodes.some(node => node.id === link.source) &&
@@ -118,6 +131,45 @@ document.addEventListener('DOMContentLoaded', function() {
             .force("charge", d3.forceManyBody().strength(-1000))
             .force("center", d3.forceCenter(width / 2, height / 2))
             .force("collide", d3.forceCollide().radius(d => nodeScale(d.incomingLinks) + 10));
+
+        // Fonction pour créer des clusters basés sur les thèmes
+        function forceCluster() {
+            const strength = 0.15;
+            let nodes;
+
+            // Centres des clusters par thème
+            const centroids = {};
+            
+            function force(alpha) {
+                // Pour chaque nœud
+                for (const d of nodes) {
+                    if (d.mainTheme && d.mainTheme.name) {
+                        const theme = d.mainTheme.name;
+                        
+                        // Si pas encore de centroïde pour ce thème, en créer un
+                        if (!centroids[theme]) {
+                            centroids[theme] = {
+                                x: width/2 + (Math.random() - 0.5) * width/4, 
+                                y: height/2 + (Math.random() - 0.5) * height/4
+                            };
+                        }
+                        
+                        // Attirer le nœud vers le centroïde de son thème
+                        d.vx += (centroids[theme].x - d.x) * strength * alpha;
+                        d.vy += (centroids[theme].y - d.y) * strength * alpha;
+                    }
+                }
+            }
+            
+            force.initialize = (_nodes) => nodes = _nodes;
+            
+            return force;
+        }
+
+        // Ajouter la force de clustering à la simulation si des thèmes sont présents
+        if (uniqueThemes.length > 0) {
+            simulation.force("cluster", forceCluster());
+        }
 
         // Créer les liens
         const link = g.append("g")
@@ -160,102 +212,150 @@ document.addEventListener('DOMContentLoaded', function() {
         // Style sombre pour le fond et les nœuds
         svg.style("background-color", "#1e1e1e"); // Fond sombre
 
-
-        const electricGradient = d3.interpolateHcl("#00ffff", "#ff00ff"); // Bleu électrique à violet
-
-        const colorScale = d3.scaleSequential(electricGradient)
-            .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)]);
-
-        // Cercles pour les nœuds avec taille variable
+        // Cercles pour les nœuds avec taille variable et couleurs basées sur les thèmes
         node.append("circle")
             .attr("r", d => nodeScale(d.incomingLinks))
-            .attr("fill", "#003300") // Vert Matrix foncé
-            .attr("stroke", "#00ff00") // Bordure verte fluo
-            .attr("stroke-width", 2); // Épaisseur de la bordure
+            .attr("fill", d => {
+                // Si le nœud a un thème principal, utiliser une couleur basée sur ce thème
+                if (d.mainTheme && d.mainTheme.name) {
+                    return themeColorScale(d.mainTheme.name);
+                }
+                // Sinon, utiliser la couleur par défaut
+                return "#003300"; // Vert Matrix foncé
+            })
+            .attr("stroke", d => {
+                // Intensité de la bordure basée sur la pertinence du thème
+                if (d.mainTheme && d.mainTheme.relevance) {
+                    // Plus la pertinence est élevée, plus la bordure est brillante
+                    const brightness = Math.min(255, Math.round(d.mainTheme.relevance * 10));
+                    return `rgb(0, ${brightness}, 0)`;
+                }
+                return "#00ff00"; // Bordure verte fluo par défaut
+            })
+            .attr("stroke-width", 2);
 
-            const isDarkBackground = true; // ou une logique pour détecter le fond
-
-            // Texte pour les nœuds
-            node.append("text")
-                .attr("dx", d => nodeScale(d.incomingLinks) + 5)
-                .attr("dy", ".35em")
-                .text(d => d.title)
-                .attr("fill", "#00ff00") // Texte vert fluo
-                .attr("font-family", "Arial")
-                .attr("font-size", "12px");
+        // Texte pour les nœuds
+        node.append("text")
+            .attr("dx", d => nodeScale(d.incomingLinks) + 5)
+            .attr("dy", ".35em")
+            .text(d => d.title)
+            .attr("fill", "#00ff00") // Texte vert fluo
+            .attr("font-family", "Arial")
+            .attr("font-size", "12px");
 
         // Gestion des événements pour les nœuds
         node
-        .on("mouseover", function(event, d) {
-            tooltip.style("visibility", "visible")
-                .html(`
-                    <strong>${d.title}</strong><br>
-                    ID: ${d.id}<br>
-                    Liens entrants: ${d.incomingLinks}<br>
-                    <em>Ctrl+Clic pour ouvrir dans TYPO3<br>
-                    Clic droit pour supprimer</em>
-                `);
-        })
-        .on("mousemove", function(event) {
-            tooltip.style("top", (event.pageY + 10) + "px")
-                .style("left", (event.pageX + 10) + "px");
-        })
-        .on("mouseout", function() {
-            tooltip.style("visibility", "hidden");
-        })
-        .on("click", function(event, d) {
-            if (event.ctrlKey || event.metaKey) {
-                // Récupérer le domaine courant et ouvrir la page dans le module Page de TYPO3
-                const baseUrl = window.location.origin;
-                const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
-                window.open(typo3Url, '_blank');
-            }
-        })
+            .on("mouseover", function(event, d) {
+                let themeHtml = '';
+                
+                // Ajouter les informations de thème si disponibles
+                if (d.themes && d.themes.length > 0) {
+                    themeHtml = '<br><strong>Thèmes:</strong><br>';
+                    d.themes.slice(0, 3).forEach(theme => {
+                        themeHtml += `${theme.theme} (${theme.relevance.toFixed(1)})<br>`;
+                    });
+                }
+                
+                tooltip.style("visibility", "visible")
+                    .html(`
+                        <strong>${d.title}</strong><br>
+                        ID: ${d.id}<br>
+                        Liens entrants: ${d.incomingLinks}
+                        ${themeHtml}
+                        <em>Ctrl+Clic pour ouvrir dans TYPO3<br>
+                        Clic droit pour supprimer</em>
+                    `);
+            })
+            .on("mousemove", function(event) {
+                tooltip.style("top", (event.pageY + 10) + "px")
+                    .style("left", (event.pageX + 10) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.style("visibility", "hidden");
+            })
+            .on("click", function(event, d) {
+                if (event.ctrlKey || event.metaKey) {
+                    // Récupérer le domaine courant et ouvrir la page dans le module Page de TYPO3
+                    const baseUrl = window.location.origin;
+                    const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
+                    window.open(typo3Url, '_blank');
+                }
+            })
+            .on("contextmenu", function(event, d) {
+                event.preventDefault();
+            
+                // 1. Supprimer le nœud
+                diagramData.nodes = diagramData.nodes.filter(node => node.id !== d.id);
+            
+                // 2. Supprimer les liens connectés au nœud
+                diagramData.links = diagramData.links.filter(link => 
+                    link.sourcePageId !== d.id && link.targetPageId !== d.id
+                );
+            
+                // 3. Créer les objets de liens appropriés pour D3
+                const d3Links = diagramData.links.map(link => ({
+                    source: diagramData.nodes.find(node => node.id === link.sourcePageId),
+                    target: diagramData.nodes.find(node => node.id === link.targetPageId),
+                    contentElement: link.contentElement,
+                    broken: link.broken
+                })).filter(link => link.source && link.target); // Filtrer les liens avec des nœuds manquants
+            
+                // 4. Mettre à jour les sélections D3
+                // Mise à jour des nœuds
+                const nodeSelection = g.selectAll('.node')
+                    .data(diagramData.nodes, node => node.id);
+                
+                nodeSelection.exit().remove();
+                
+                // Mise à jour des liens
+                const linkSelection = g.selectAll('line')
+                    .data(d3Links);
+                
+                linkSelection.exit().remove();
+            
+                // 5. Mettre à jour la simulation
+                simulation.nodes(diagramData.nodes);
+                simulation.force("link").links(d3Links);
+            
+                // 6. Redémarrer la simulation
+                simulation.alpha(1).restart();
+            
+                // Debug
+                console.log("Nodes après suppression:", diagramData.nodes);
+                console.log("Liens après suppression:", d3Links);
+            });
 
-        .on("contextmenu", function(event, d) {
-            event.preventDefault();
-        
-            // 1. Supprimer le nœud
-            diagramData.nodes = diagramData.nodes.filter(node => node.id !== d.id);
-        
-            // 2. Supprimer les liens connectés au nœud
-            diagramData.links = diagramData.links.filter(link => 
-                link.sourcePageId !== d.id && link.targetPageId !== d.id
-            );
-        
-            // 3. Créer les objets de liens appropriés pour D3
-            const d3Links = diagramData.links.map(link => ({
-                source: diagramData.nodes.find(node => node.id === link.sourcePageId),
-                target: diagramData.nodes.find(node => node.id === link.targetPageId),
-                contentElement: link.contentElement,
-                broken: link.broken
-            })).filter(link => link.source && link.target); // Filtrer les liens avec des nœuds manquants
-        
-            // 4. Mettre à jour les sélections D3
-            // Mise à jour des nœuds
-            const nodeSelection = g.selectAll('.node')
-                .data(diagramData.nodes, node => node.id);
+        // Ajouter une légende pour les thèmes si des thèmes sont présents
+        if (uniqueThemes.length > 0) {
+            const legend = svg.append("g")
+                .attr("class", "legend")
+                .attr("transform", `translate(${width - 200}, 30)`);
+
+            // Titre de la légende
+            legend.append("text")
+                .attr("x", 0)
+                .attr("y", -10)
+                .attr("fill", "#00ff00")
+                .text("Thèmes dominants");
+
+            // Éléments de la légende
+            uniqueThemes.forEach((theme, i) => {
+                const legendItem = legend.append("g")
+                    .attr("transform", `translate(0, ${i * 25})`);
+                    
+                legendItem.append("rect")
+                    .attr("width", 20)
+                    .attr("height", 20)
+                    .attr("fill", themeColorScale(theme));
+                    
+                legendItem.append("text")
+                    .attr("x", 30)
+                    .attr("y", 15)
+                    .attr("fill", "#00ff00")
+                    .text(theme);
+            });
+        }
             
-            nodeSelection.exit().remove();
-            
-            // Mise à jour des liens
-            const linkSelection = g.selectAll('line')
-                .data(d3Links);
-            
-            linkSelection.exit().remove();
-        
-            // 5. Mettre à jour la simulation
-            simulation.nodes(diagramData.nodes);
-            simulation.force("link").links(d3Links);
-        
-            // 6. Redémarrer la simulation
-            simulation.alpha(1).restart();
-        
-            // Debug
-            console.log("Nodes après suppression:", diagramData.nodes);
-            console.log("Liens après suppression:", d3Links);
-        });
-        
         // Mettre à jour la fonction tick pour utiliser les bonnes références
         simulation.on("tick", () => {
             g.selectAll("line")
@@ -270,24 +370,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Ajouter le zoom et le déplacement
         const zoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .on("zoom", (event) => {
-            g.attr("transform", event.transform); // Appliquer uniquement la transformation
-        });
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
     
-    svg.call(zoom);
-
-        simulation.on("tick", () => {
-            link
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-
-            node
-                .attr("transform", d => `translate(${d.x},${d.y})`);
-        });
-        
+        svg.call(zoom);
 
         function drag(simulation) {
             function dragstarted(event) {

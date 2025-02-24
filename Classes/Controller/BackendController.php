@@ -60,6 +60,13 @@ class BackendController extends ActionController
             try {
                 error_log('BackendController - Calling PageLinkService');
                 $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
+                
+                // Récupérer les données thématiques
+                $themeData = $this->themeDataService->getThemesForSubtree($pageUid);
+                
+                // Enrichir les nœuds avec les informations thématiques
+                $data['nodes'] = $this->themeDataService->enrichNodesWithThemes($data['nodes'], $themeData);
+                
                 $kpis = $this->getPageKPIs($pageUid);
             } catch (\Exception $e) {
                 error_log('BackendController - Error: ' . $e->getMessage());

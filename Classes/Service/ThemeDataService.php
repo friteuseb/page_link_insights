@@ -25,28 +25,53 @@ class ThemeDataService {
         $this->languageDetector = GeneralUtility::makeInstance(LanguageDetectionService::class);
     }
 
-    private function extractSignificantTerms(string $content, int $pageId): array {
+    private function extractSignificantTerms(string $content, int $pageId): array
+    {
         try {
             // Détecter la langue du contenu
             $language = $this->languageDetector->detectLanguage($content);
             
-            // Nettoyer et prétraiter le texte
-            $cleanedContent = preg_replace('/[^\p{L}\s]/u', ' ', $content);
+            // Supprimer complètement les balises HTML
+            $cleanedContent = strip_tags($content);
+            
+            // Supprimer les entités HTML (comme &nbsp;)
+            $cleanedContent = html_entity_decode($cleanedContent, ENT_QUOTES, 'UTF-8');
+            
+            // Nettoyer les caractères spéciaux
+            $cleanedContent = preg_replace('/[^\p{L}\s]/u', ' ', $cleanedContent);
             $cleanedContent = preg_replace('/\s+/', ' ', $cleanedContent);
+            
+            // Ajouter une liste personnalisée de "stopwords" liés au HTML/CSS/JS
+            $htmlStopwords = ['class', 'href', 'div', 'span', 'http', 'https', 'www', 'img', 'src'];
             
             // Tokenizer et enlever les stop words
             $processedContent = $this->textAnalyzer->removeStopWords($cleanedContent, $language);
             $tokens = $this->textAnalyzer->tokenize($processedContent);
-            
-            // Appliquer le stemming pour regrouper les mots de même racine
+
+            // Vérifier si $tokens est un tableau valide
+            if (!is_array($tokens)) {
+                $this->logger->error('Erreur de tokenization', [
+                    'pageId' => $pageId
+                ]);
+                $tokens = [];
+            }
+
+            // Vérifier également le résultat du stemming
             $stemmedTokens = $this->textAnalyzer->stem($processedContent, $language);
+            if (!is_array($stemmedTokens)) {
+                $this->logger->error('Erreur de stemming', [
+                    'pageId' => $pageId
+                ]);
+                $stemmedTokens = [];
+            }
             
             // Filtrer et compter les occurrences
-            $termFrequency = array_count_values(array_filter($stemmedTokens, function($token) {
+            $termFrequency = array_count_values(array_filter($stemmedTokens, function($token) use ($htmlStopwords) {
                 return strlen($token) > 3 
                     && strlen($token) < 30 
                     && !is_numeric($token)
-                    && !preg_match('/[0-9]/', $token);
+                    && !preg_match('/[0-9]/', $token)
+                    && !in_array(strtolower($token), $htmlStopwords);
             }));
             
             // Ne garder que les termes apparaissant plus d'une fois
@@ -62,6 +87,7 @@ class ThemeDataService {
             ]);
             return [];
         }
+        
     }
     
     public function getThemesForSubtree(int $pageUid): array {
@@ -222,26 +248,54 @@ class ThemeDataService {
         }
     }
     
-    private function getSubtreePageIds(int $rootPageId): array {
+    private function getSubtreePageIds(int $rootPageId): array
+    {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         
-        $pages = $queryBuilder
+        // D'abord récupérer la page racine
+        $rootPage = $queryBuilder
             ->select('uid')
             ->from('pages')
             ->where(
-                $queryBuilder->expr()->or(
-                    $queryBuilder->expr()->eq('uid', 
-                        $queryBuilder->createNamedParameter($rootPageId)
-                    ),
-                    $queryBuilder->expr()->eq('pid', 
-                        $queryBuilder->createNamedParameter($rootPageId)
-                    )
+                $queryBuilder->expr()->eq('uid', 
+                    $queryBuilder->createNamedParameter($rootPageId)
                 )
             )
             ->executeQuery()
-            ->fetchAllAssociative();
+            ->fetchAssociative();
             
-        return array_column($pages, 'uid');
+        if (!$rootPage) {
+            return [];
+        }
+        
+        $allPageIds = [$rootPage['uid']];
+        $pagesToProcess = [$rootPage['uid']];
+        
+        // Parcourir récursivement l'arborescence
+        while (!empty($pagesToProcess)) {
+            $currentPageIds = $pagesToProcess;
+            $pagesToProcess = [];
+            
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+            $childPages = $queryBuilder
+                ->select('uid')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->in(
+                        'pid',
+                        $queryBuilder->createNamedParameter($currentPageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                    )
+                )
+                ->executeQuery()
+                ->fetchAllAssociative();
+            
+            foreach ($childPages as $page) {
+                $allPageIds[] = $page['uid'];
+                $pagesToProcess[] = $page['uid'];
+            }
+        }
+        
+        return $allPageIds;
     }
     
     private function getThemes(array $pageIds): array {
