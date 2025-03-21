@@ -19,6 +19,7 @@
             "extension-key": "page_link_insights"
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }
+
