@@ -83,6 +83,9 @@ To set up automatic link analysis:
 4. Configure the root page ID
 5. Set your preferred frequency
 
+![Scheduler Task](Resources/Public/Images/scheduler_task.png)
+
+
 ## Usage
 
 ### Visualizing Page Links
