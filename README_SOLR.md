@@ -1,188 +1,151 @@
 # Solr Integration for Page Link Insights
 
-This documentation explains how to integrate internal linking analysis data (PageRank, inbound links, etc.) into your Solr search results.
+This documentation explains how to integrate internal linking analysis data (PageRank, inbound links, etc.) into your Solr search results to improve relevancy and enable advanced search features.
 
 ## Features
 
-- Enrichment of Solr documents with local PageRank
-- Search result boosting based on page popularity
-- Consideration of inbound link count
-- Ability to sort results by PageRank
+- **PageRank Integration**: Boost search results based on page authority
+- **Inbound Link Weighting**: Consider popularity in search relevance
+- **Centrality Metrics**: Use page network position for ranking
+- **Custom Sorting**: Enable sorting by page importance
+- **Configurable Relevance**: Adjust factors through TypoScript
 
 ## Installation
 
-1. **Solr Schema Configuration**
+### 1. Solr Schema Configuration
 
 Add the following fields to your `schema.xml`:
+
 ```xml
 <field name="pagerank_f" type="float" indexed="true" stored="true"/>
 <field name="inbound_links_i" type="int" indexed="true" stored="true"/>
 <field name="centrality_f" type="float" indexed="true" stored="true"/>
 ```
 
-2. **TypoScript Configuration**
+### 2. TypoScript Configuration
 
-The `Configuration/TypoScript/setup.typoscript` file has been created with:
-- DataProcessor configuration
-- Field definitions
-- Scoring configuration
-- Sorting options
-
-Add this configuration to your site's TypoScript setup (Site Management > Sites > Your Site > TypoScript):
+The extension includes a prepared TypoScript configuration. Add it to your site by:
 
 ```typoscript
-plugin.tx_solr {
-    index {
-        queue {
-            pages {
-                dataProcessing {
-                    1 = Cywolf\PageLinkInsights\Solr\PageMetricsProcessor
-                }
-                fields {
-                    pagerank_f = float
-                    inbound_links_i = integer
-                    centrality_f = float
-                }
-            }
-        }
-    }
-    search {
-        # Customize scoring per site
-        relevance {
-            multiplier {
-                pagerank = 2.0    # Adjust to control PageRank influence
-                inboundLinks = 1.5 # Adjust to control inbound links influence
-            }
-        }
-    }
-}
+@import "EXT:page_link_insights/Configuration/TypoScript/setup.typoscript"
 ```
 
-3. **Installation Verification**
+Alternatively, uncomment the import in `ext_localconf.php`.
 
-- Clear all TYPO3 caches
-- Reindex all pages in Solr
-- Verify the presence of new fields
+The configuration includes:
+- DataProcessor for page metrics
+- Field definitions
+- Relevance formula
+- Sorting options
+
+### 3. Extension Activation
+
+The Solr integration requires the main features of the extension to be working:
+
+1. Make sure the Scheduler task has been run at least once
+2. Verify metrics are stored in `tx_pagelinkinsights_pageanalysis` table
+3. Reindex your pages in Solr
 
 ## Usage
 
-### Checking the Indexation
+### Checking Indexed Metrics
+
+To verify the metrics are properly indexed:
 
 1. Access the Solr admin interface
 2. Search with `*:*` to see all documents
-3. Check for the presence of fields:
-   - pagerank_f
-   - inbound_links_i
-   - centrality_f
+3. Verify the presence of fields:
+   - `pagerank_f`: Authority score of the page
+   - `inbound_links_i`: Number of incoming content links
+   - `centrality_f`: Network centrality score
 
-### Testing the Scoring
+### Understanding the Scoring
 
-The scoring is influenced by:
-- PageRank (multiplier of 2.0)
-- Number of inbound links (multiplier of 1.5)
-- Base search score
+The default configuration uses the following influence factors:
+- PageRank (multiplier: 2.0)
+- Inbound links (multiplier: 1.5)
+- Base Solr score (multiplier: 1.0)
 
-Formula: `final_score = (base_score * 1.0) + (pagerank * 2.0) + (inbound_links * 1.5)`
+The final formula combines these elements:
+```
+final_score = (base_score * 1.0) + (pagerank * 2.0) + (inbound_links * 1.5)
+```
 
-### Result Sorting
+### Sorting by Page Importance
 
-A new "Page Rank" sort is available in the result sorting options.
-
-## Troubleshooting
-
-### Metrics Not Appearing in Solr
-
-1. Check that the scheduler task has been executed
-2. Control the data in the `tx_pagelinkinsights_pageanalysis` table
-3. Reindex the concerned pages
-
-### Scores Seem Incorrect
-
-1. Check PageRank values in the Page Link Insights interface
-2. Control multipliers in TypoScript configuration
-3. Examine Solr debug report to understand score calculation
+The configuration adds a new sorting option "Page Rank" to your Solr frontend, allowing users to sort by page importance rather than just relevance.
 
 ## Customization
 
-### Adjusting Multipliers
+### Adjusting Relevance Factors
 
-
-You can customize the influence of different factors by adjusting the multipliers in your site's TypoScript:
+You can customize the influence of different metrics by changing the multipliers:
 
 ```typoscript
 plugin.tx_solr.search.relevance.multiplier {
-    pagerank = 3.0     # Increase to give more weight to PageRank
-    inboundLinks = 1.0 # Decrease to reduce influence of inbound links
+    pagerank = 3.0     # Increase PageRank influence
+    inboundLinks = 1.0 # Decrease link count influence
 }
 ```
 
-### Adding New Criteria
+### Advanced Formula Customization
 
-1. Add the field in `schema.xml`
-2. Modify PageMetricsProcessor.php
-3. Update TypoScript configuration
-4. Reindex pages
+For more complex scoring, you can modify the formula directly:
 
-## FAQ
+```typoscript
+plugin.tx_solr.search.relevance.formula = sum(
+    mul(queryNorm(dismax(v:1)), 1.0),
+    mul(fieldValue(pagerank_f), 2.0),
+    mul(div(fieldValue(inbound_links_i), 100), 1.5),
+    # Add additional factors here
+)
+```
 
-**Q: Why do some pages have a PageRank of 0?**  
-A: This can happen if the page has no inbound links or if the last analysis hasn't been run.
+## Troubleshooting
 
-**Q: Are link changes immediately reflected?**  
-A: No, you need to wait for the next scheduler task execution and then reindex the pages.
+### Metrics Not Appearing
 
-**Q: How can I optimize scores for my site?**  
-A: Adjust the multipliers in the TypoScript configuration based on the relative importance of PageRank and inbound links for your use case.
+If metrics aren't showing up in your Solr index:
+
+1. Run the Page Link Insights scheduler task
+2. Check data exists in the database table
+3. Reindex the pages in Solr
+4. Clear all TYPO3 caches
+
+### Incorrect Scoring
+
+If search results aren't ranked as expected:
+
+1. Verify the actual PageRank values in Page Link Insights module
+2. Check multiplier settings in TypoScript
+3. Examine debug information from Solr
+4. Adjust multipliers to achieve desired balance
 
 ## Advanced Usage
 
-### Search Result Boosting
+### Incremental Updates
 
-The default configuration boosts pages based on their network metrics. You can customize this in your TypoScript:
+For large sites, consider implementing incremental updates:
 
-```typoscript
-plugin.tx_solr {
-    search {
-        relevance {
-            multiplier {
-                pagerank = 2.0
-                inboundLinks = 1.5
-            }
-            formula = sum(
-                mul(queryNorm(dismax(v:1)), 1.0),
-                mul(fieldValue(pagerank_f), 2.0),
-                mul(fieldValue(inbound_links_i), 1.5)
-            )
-        }
-    }
-}
-```
+1. Configure the scheduler task to run more frequently on a subset of pages
+2. Mark only affected pages for reindexing in Solr
+3. Use dedicated indexing queues for metrics updates
 
-### Debug Mode
+### A/B Testing Weights
 
-To verify that metrics are being properly indexed:
+To find optimal relevance settings:
 
-1. Enable Solr debug mode in TYPO3:
-```typoscript
-plugin.tx_solr.logging.query.queryString = 1
-```
+1. Create multiple search configurations with different weights
+2. Use Solr search collections to compare results
+3. Analyze user behavior to determine best settings
 
-2. Check the Solr query log in the TYPO3 backend
-3. Verify that your custom fields are included in the query
+## FAQ
 
-### Reindexing Strategies
+**Q: Will this slow down my Solr searches?**  
+A: The impact is minimal. The additional calculations happen during indexing, not during search.
 
-For large sites, consider these reindexing approaches:
+**Q: How often should I update PageRank metrics?**  
+A: For most sites, weekly is sufficient. Sites with frequent content updates may benefit from daily runs.
 
-1. **Incremental Updates**:
-   - Only reindex pages that have changed
-   - Configure the scheduler task to mark affected pages for reindexing
-
-2. **Batch Processing**:
-   - Use the TYPO3 command line interface
-   - Process pages in chunks to avoid timeout issues
-
-Example CLI command:
-```bash
-vendor/bin/typo3 solr:reindex --site="your-site" --update-metrics
-```
+**Q: Can I use this with non-page records?**  
+A: Currently, the metrics are calculated only for pages, but the concept could be extended to other record types.
