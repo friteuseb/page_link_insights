@@ -11,6 +11,12 @@ services:
 
   Cywolf\PageLinkInsights\Controller\BackendController:
     tags: ['backend.controller']
+    arguments:
+      $moduleTemplateFactory: '@TYPO3\CMS\Backend\Template\ModuleTemplateFactory'
+      $pageRenderer: '@TYPO3\CMS\Core\Page\PageRenderer'
+      $extensionConfiguration: '@TYPO3\CMS\Core\Configuration\ExtensionConfiguration'
+      $pageLinkService: '@Cywolf\PageLinkInsights\Service\PageLinkService'
+      $themeDataService: '@Cywolf\PageLinkInsights\Service\ThemeDataService'
     
   Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
@@ -29,4 +35,3 @@ services:
   
   Cywolf\PageLinkInsights\Service\ThemeDataService:
     public: true
-    # Pas besoin de définir explicitement les arguments car autowire: true les gérera
