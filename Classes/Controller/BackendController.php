@@ -1,88 +1,123 @@
 <?php
-
 namespace Cywolf\PageLinkInsights\Controller;
 
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
+use TYPO3\CMS\Core\Http\HtmlResponse;
+use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Page\PageRenderer;
-use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
-use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
-use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
+use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
+use TYPO3\CMS\Fluid\View\StandaloneView;
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use Cywolf\PageLinkInsights\Service\PageLinkService;
 use Cywolf\PageLinkInsights\Service\ThemeDataService;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 
 class BackendController extends ActionController
 {
     protected array $extensionSettings;
     protected bool $debugMode = true;
-    
+    protected bool $isVersion13;
+
     public function __construct(
-        private readonly ModuleTemplateFactory $moduleTemplateFactory,
-        private readonly PageRenderer $pageRenderer,
-        private readonly PageRepository $pageRepository,
-        private readonly ExtensionConfiguration $extensionConfiguration,
-        private readonly PageLinkService $pageLinkService,
-        private readonly ThemeDataService $themeDataService 
-
+        protected readonly ModuleTemplateFactory $moduleTemplateFactory,
+        protected readonly PageRenderer $pageRenderer,
+        protected readonly ExtensionConfiguration $extensionConfiguration,
+        protected readonly PageLinkService $pageLinkService,
+        protected readonly ThemeDataService $themeDataService
     ) {
-    }
-
-    protected function initializeAction(): void
-    {
-        parent::initializeAction();
         $this->extensionSettings = $this->extensionConfiguration->get('page_link_insights') ?? [];
-        $this->debug('Controller initialized');
-        
-        // Ajouter les fichiers JS nécessaires dès l'initialisation
-        $this->pageRenderer->addJsFile(
-            'EXT:page_link_insights/Resources/Public/JavaScript/Vendor/d3.min.js'
-        );
-        
-        $this->pageRenderer->addJsFile(
-            'EXT:page_link_insights/Resources/Public/JavaScript/force-diagram.js'
-        );
+        $typo3Version = GeneralUtility::makeInstance(Typo3Version::class);
+        $this->isVersion13 = $typo3Version->getMajorVersion() >= 13;
     }
 
-    
+    // Pour TYPO3 v13 - Interface Extbase ActionController
     public function mainAction(): ResponseInterface
     {
-        $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
-        error_log('BackendController - Page UID: ' . $pageUid);
-    
-        if ($pageUid === 0) {
-            $data = ['nodes' => [], 'links' => []];
-            $kpis = [];
-        } else {
-            try {
-                error_log('BackendController - Calling PageLinkService');
-                $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
-                
-                // Récupérer les données thématiques
-                $themeData = $this->themeDataService->getThemesForSubtree($pageUid);
-                
-                // Enrichir les nœuds avec les informations thématiques
-                $data['nodes'] = $this->themeDataService->enrichNodesWithThemes($data['nodes'], $themeData);
-                
-                $kpis = $this->getPageKPIs($pageUid);
-            } catch (\Exception $e) {
-                error_log('BackendController - Error: ' . $e->getMessage());
-                $data = ['nodes' => [], 'links' => []];
-                $kpis = [];
-            }
+        // Si nous sommes en v13, utiliser cette implémentation
+        if ($this->isVersion13) {
+            return $this->renderForV13();
         }
-    
+        
+        // Sinon, utiliser l'implémentation v12 avec l'objet de requête à partir d'Extbase
+        return $this->mainActionV12($this->request);
+    }
+
+    // Pour TYPO3 v12 - Interface PSR-7 ServerRequestInterface
+    public function mainActionV12(ServerRequestInterface $request): ResponseInterface
+    {
+        // Ajouter JS
+        $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/Vendor/d3.min.js');
+        $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/force-diagram.js');
+        
+        $view = GeneralUtility::makeInstance(StandaloneView::class);
+        $view->setTemplateRootPaths(['EXT:page_link_insights/Resources/Private/Templates/']);
+        $view->setLayoutRootPaths(['EXT:page_link_insights/Resources/Private/Layouts/']);
+        $view->setPartialRootPaths(['EXT:page_link_insights/Resources/Private/Partials/']);
+        $view->setTemplate('Main');
+        
+        $pageUid = (int)($request->getQueryParams()['id'] ?? 0);
+        
+        // Préparer les données comme d'habitude...
+        $data = $this->prepareData($pageUid);
+        $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
+        
+        $view->assignMultiple([
+            'data' => json_encode($data),
+            'kpis' => $kpis,
+            'noPageSelected' => ($pageUid === 0),
+        ]);
+        
+        $moduleTemplate = $this->moduleTemplateFactory->create($request);
+        $moduleTemplate->setContent($view->render());
+        
+        return new HtmlResponse($moduleTemplate->renderContent());
+    }
+
+    protected function renderForV13(): ResponseInterface
+    {
+        // Ajouter JS
+        $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/Vendor/d3.min.js');
+        $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/force-diagram.js');
+        
+        $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
+        
+        // Préparer les données comme d'habitude...
+        $data = $this->prepareData($pageUid);
+        $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
+        
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->assignMultiple([
             'data' => json_encode($data),
             'kpis' => $kpis,
             'noPageSelected' => ($pageUid === 0),
         ]);
-    
+        
         return $moduleTemplate->renderResponse('Main');
+    }
+    
+    protected function prepareData(int $pageUid): array
+    {
+        if ($pageUid === 0) {
+            return ['nodes' => [], 'links' => []];
+        }
+        
+        try {
+            $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
+            
+            // Récupérer les données thématiques
+            $themeData = $this->themeDataService->getThemesForSubtree($pageUid);
+            
+            // Enrichir les nœuds avec les informations thématiques
+            $data['nodes'] = $this->themeDataService->enrichNodesWithThemes($data['nodes'], $themeData);
+            
+            return $data;
+        } catch (\Exception $e) {
+            $this->debug('Error getting data: ' . $e->getMessage());
+            return ['nodes' => [], 'links' => []];
+        }
     }
 
     protected function getPageKPIs(int $pageUid): array
