@@ -3,3 +3,6 @@ colPosToAnalyze = 0,2
 
 # cat=basic/enable; type=boolean; label=Include hidden content
 includeHidden = 0
+
+# cat=basic/enable; type=boolean; label=Include Semantic Suggestions
+includeSemanticSuggestions = 1

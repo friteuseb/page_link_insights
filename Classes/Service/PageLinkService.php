@@ -91,6 +91,59 @@ class PageLinkService
         ];
     }
 
+    private function getSemanticSuggestionLinks(array $pageUids): array
+    {
+        $links = [];
+        
+        if (empty($pageUids) || !$this->isSemanticSuggestionInstalled()) {
+            return $links;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_semanticsuggestion_similarities');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction());
+        
+        $similarities = $queryBuilder
+            ->select('page_id', 'similar_page_id', 'similarity_score')
+            ->from('tx_semanticsuggestion_similarities')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'page_id',
+                    $queryBuilder->createNamedParameter($pageUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                ),
+                // Utiliser le seuil de similarité défini dans Semantic Suggestion si possible
+                $queryBuilder->expr()->gt(
+                    'similarity_score',
+                    $queryBuilder->createNamedParameter(0.3, \PDO::PARAM_STR) // seuil par défaut ou configurable
+                )
+            )
+            ->orderBy('similarity_score', 'DESC')
+            ->executeQuery()
+            ->fetchAllAssociative();
+        
+        foreach ($similarities as $similarity) {
+            $links[] = [
+                'sourcePageId' => (string)$similarity['page_id'],
+                'targetPageId' => (string)$similarity['similar_page_id'],
+                'contentElement' => [
+                    'uid' => 0, // Pas d'élément de contenu spécifique
+                    'type' => 'semantic_suggestion',
+                    'header' => 'Semantic Suggestion',
+                    'colPos' => -1 // Valeur spéciale pour indiquer que c'est une suggestion
+                ],
+                'similarity' => $similarity['similarity_score'],
+                'isSemantic' => true
+            ];
+        }
+        
+        return $links;
+    }
+
+    private function isSemanticSuggestionInstalled(): bool
+    {
+        return \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
+    }
 
     private function getMenuSitemapPages(array $pageUids): array
     {
@@ -256,8 +309,14 @@ class PageLinkService
             }
         }
 
-        return $links;
-    }
+            // Ajouter les liens de suggestion sémantique
+            if ($this->isSemanticSuggestionInstalled()) {
+                $semanticLinks = $this->getSemanticSuggestionLinks($pageUids);
+                $links = array_merge($links, $semanticLinks);
+            }
+
+            return $links;
+        }
 
     private function processTextLinks(string $content, array $element, array &$links): void
     {

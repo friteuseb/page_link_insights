@@ -112,7 +112,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'html': '#ff00ff', // Magenta
             'typolink': '#ffcc00', // Jaune électrique
             'sitemap': '#cc00ff', // Violet électrique
-            'text': '#00ffcc' // Cyan clair
+            'text': '#00ffcc', // Cyan clair
+            'semantic_suggestion': '#9c27b0' // Violet pour les liens sémantiques
         };
         
         // Filtrer les liens brisés
@@ -189,6 +190,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             Source: ${d.source}<br>
                             Cible: ${d.target}<br>
                             <em>La page cible n'existe pas.</em>
+                        `);
+                } else if (d.contentElement?.type === 'semantic_suggestion') {
+                    tooltip.style("visibility", "visible")
+                        .html(`
+                            <strong>Suggestion sémantique</strong><br>
+                            Source: Page #${d.source.id || d.source}<br>
+                            Cible: Page #${d.target.id || d.target}<br>
+                            ${d.similarity ? `Score: ${(d.similarity * 100).toFixed(1)}%<br>` : ''}
+                            <em>Lien généré automatiquement par analyse de contenu</em>
                         `);
                 }
             })
