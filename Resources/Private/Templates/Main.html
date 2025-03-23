@@ -19,17 +19,53 @@
                 padding: 0;
             }
         </style>
-     <div class="link-legend">
-        <div class="legend-item">
-            <span class="line regular"></span> Liens de contenu direct
+
+        <div class="module-header">
+            <h1>
+                <f:translate key="module.title">Page Link Insights</f:translate>
+                <small>
+                    <f:translate key="module.subtitle">Interactive visualization of page relationships</f:translate>
+                </small>
+            </h1>
+            
+            <p class="lead">
+                <f:translate key="module.description">Explore how your pages connect through content links and references.</f:translate>
+            </p>
+            
+            <f:if condition="{semanticSuggestionInstalled}">
+                <div class="alert alert-info">
+                    <div class="media">
+                        <div class="media-left">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x text-info"></i>
+                                <i class="fa fa-info fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </div>
+                        <div class="media-body">
+                            <f:translate key="module.semanticEnabled">Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram.</f:translate>
+                        </div>
+                    </div>
+                </div>
+            </f:if>
+            
+            <f:if condition="{semanticSuggestionInstalled} == 0">
+                <div class="alert alert-warning">
+                    <div class="media">
+                        <div class="media-left">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x text-warning"></i>
+                                <i class="fa fa-exclamation fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </div>
+                        <div class="media-body">
+                            <f:translate key="module.semanticDisabled">Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</f:translate>
+                        </div>
+                    </div>
+                </div>
+            </f:if>
         </div>
-        <div class="legend-item">
-            <span class="line semantic"></span> Suggestions sémantiques
-        </div>
-        <div class="legend-item">
-            <span class="line broken"></span> Liens cassés
-        </div>
-    </div>   
+
+
     <div class="module">
         <div class="module-body">
             <!-- Compact Site Analytics -->

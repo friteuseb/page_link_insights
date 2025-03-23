@@ -15,6 +15,21 @@
             <trans-unit id="task.error.invalidRootPage">
                 <source>Please enter a valid root page ID (must be greater than 0)</source>
             </trans-unit>
+             <trans-unit id="module.title">
+                <source>Page Link Insights with Semantic Suggestions</source>
+            </trans-unit>
+            <trans-unit id="module.subtitle">
+                <source>Visualize content relationships and semantic connections</source>
+            </trans-unit>
+            <trans-unit id="module.description">
+                <source>Explore how your pages connect through explicit links and semantic suggestions.</source>
+            </trans-unit>
+            <trans-unit id="module.semanticEnabled">
+                <source>Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram as purple dashed lines.</source>
+            </trans-unit>
+            <trans-unit id="module.semanticDisabled">
+                <source>Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>
