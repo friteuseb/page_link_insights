@@ -8,10 +8,10 @@ $EM_CONF['page_link_insights'] = [
     'clearCacheOnLoad' => true,
     'author' => 'Cyril Wolfangel',
     'author_email' => 'cyril.wolfangel@gmail.com',
-    'version' => '1.1.0',
+    'version' => '1.2.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '13.0.0-13.99.99',
+            'typo3' => '>=12.4.0,<14.0.0',
         ],
     ],
 ];
