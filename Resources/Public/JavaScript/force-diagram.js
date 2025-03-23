@@ -365,6 +365,47 @@ document.addEventListener('DOMContentLoaded', function() {
                     .text(theme);
             });
         }
+
+        // Ajouter une légende pour les types de liens
+            const linkLegend = svg.append("g")
+            .attr("class", "link-legend")
+            .attr("transform", `translate(20, 30)`); // Positionné en haut à gauche
+
+            // Titre de la légende
+            linkLegend.append("text")
+            .attr("x", 0)
+            .attr("y", -10)
+            .attr("fill", "#00ff00")
+            .text("Types de liens");
+
+            // Définir les types de liens pour la légende
+            const linkTypes = [
+            { type: "standard", color: "#999", dash: null, label: "Liens standards" },
+            { type: "semantic", color: "#9c27b0", dash: "8,4", label: "Suggestions sémantiques" },
+            { type: "broken", color: "#ff0000", dash: "5,5", label: "Liens cassés" }
+            ];
+
+            // Éléments de la légende
+            linkTypes.forEach((linkType, i) => {
+            const legendItem = linkLegend.append("g")
+                .attr("transform", `translate(0, ${i * 25})`);
+                
+            // Ligne représentant le lien
+            legendItem.append("line")
+                .attr("x1", 0)
+                .attr("y1", 10)
+                .attr("x2", 20)
+                .attr("y2", 10)
+                .attr("stroke", linkType.color)
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", linkType.dash);
+                
+            legendItem.append("text")
+                .attr("x", 30)
+                .attr("y", 15)
+                .attr("fill", "#00ff00")
+                .text(linkType.label);
+            });
             
         // Mettre à jour la fonction tick pour utiliser les bonnes références
         simulation.on("tick", () => {
