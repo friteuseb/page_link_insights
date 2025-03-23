@@ -2,9 +2,24 @@
 <f:layout name="Default" />
 
 <f:section name="content">
-    <h1 style="color: red; font-size: 24px;">PAGE LINK INSIGHTS TEST</h1>
-
     <link rel="stylesheet" href="{f:uri.resource(path: 'Css/styles.css', extensionName: 'page_link_insights')}" />
+        <!-- Style inline pour cacher le docheader -->
+        <style>
+            .module-docheader,
+            .t3js-module-docheader {
+                display: none !important;
+            }
+            
+            #force-diagram-container {
+                height: calc(100vh - 60px) !important;
+            }
+            
+            .module-body {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+        
     <div class="module">
         <div class="module-body">
             <!-- Compact Site Analytics -->
