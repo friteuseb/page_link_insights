@@ -1,4 +1,3 @@
-<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
 <f:layout name="Default" />
 
 <f:section name="content">
@@ -31,6 +30,23 @@
             <p class="lead">
                 <f:translate key="module.description">Explore how your pages connect through content links and references.</f:translate>
             </p>
+            
+            <!-- Ajouter cette information sur les colPos -->
+            <f:if condition="{colPosToAnalyze}">
+                <div class="alert alert-info" style="font-size: 12px; margin-bottom: 10px;">
+                    <div class="media">
+                        <div class="media-left">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x text-info"></i>
+                                <i class="fa fa-info fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </div>
+                        <div class="media-body">
+                            Note: This analysis only includes links from content elements in column position(s): <strong>{colPosToAnalyze}</strong>
+                        </div>
+                    </div>
+                </div>
+            </f:if>
             
             <f:if condition="{semanticSuggestionInstalled}">
                 <div class="alert alert-info">

@@ -196,12 +196,17 @@ class PageLinkService
                         $queryBuilder->createNamedParameter($rootPageId, ParameterType::INTEGER)
                     )
                 ),
+                // Exclure les dossiers système (254) et la corbeille (255)
+                $queryBuilder->expr()->notIn(
+                    'doktype',
+                    $queryBuilder->createNamedParameter([254, 255], Connection::PARAM_INT_ARRAY)
+                ),
                 $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
             )
             ->executeQuery()
             ->fetchAllAssociative();
     }
-
+    
     private function getAdditionalPagesInfo(array $pageIds): array
     {
         if (empty($pageIds)) {
@@ -227,6 +232,11 @@ class PageLinkService
                         array_map('intval', $pageIds),
                         \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY
                     )
+                ),
+                // Exclure les dossiers système (254) et la corbeille (255)
+                $queryBuilder->expr()->notIn(
+                    'doktype',
+                    $queryBuilder->createNamedParameter([254, 255], Connection::PARAM_INT_ARRAY)
                 ),
                 $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
             )
@@ -375,8 +385,11 @@ class PageLinkService
         return $count > 0;
     }
 
-    private function processMenuElement(array $content, array &$links): void
-    {
+    private function processMenuElement(array $content, array &$links): void    {
+            // Vérifier que l'élément est dans une colPos autorisée
+    if (!in_array($content['colPos'], $this->allowedColPos)) {
+        return;
+    }
         switch ($content['CType']) {
             case 'menu_subpages':
             case 'menu_card_dir':

@@ -98,6 +98,7 @@ class BackendController extends ActionController
         return $moduleTemplate->renderResponse('Main');
     }
     
+    
     protected function prepareData(int $pageUid): array
     {
         if ($pageUid === 0) {
