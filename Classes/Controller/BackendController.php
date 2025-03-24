@@ -60,14 +60,22 @@ class BackendController extends ActionController
         
         $pageUid = (int)($request->getQueryParams()['id'] ?? 0);
         
+        // Récupérer la configuration des colPos
+        $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
+        
         // Préparer les données comme d'habitude...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
+        
+        // Vérifier si l'extension semanticSuggestion est installée
+        $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
         
         $view->assignMultiple([
             'data' => json_encode($data),
             'kpis' => $kpis,
             'noPageSelected' => ($pageUid === 0),
+            'colPosToAnalyze' => $colPosToAnalyze,
+            'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
         ]);
         
         $moduleTemplate = $this->moduleTemplateFactory->create($request);
@@ -84,15 +92,23 @@ class BackendController extends ActionController
         
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
         
+        // Utiliser directement la configuration initialisée dans le constructeur
+        $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
+        
         // Préparer les données comme d'habitude...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
+        
+        // Vérifier si l'extension semanticSuggestion est installée
+        $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
         
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->assignMultiple([
             'data' => json_encode($data),
             'kpis' => $kpis,
             'noPageSelected' => ($pageUid === 0),
+            'colPosToAnalyze' => $colPosToAnalyze,
+            'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
         ]);
         
         return $moduleTemplate->renderResponse('Main');
