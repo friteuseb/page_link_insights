@@ -109,11 +109,22 @@ To set up automatic link analysis:
 
 ### Understanding Thematic Analysis
 
-The thematic analysis groups your pages based on content similarity:
+The extension now includes thematic analysis capabilities that:
 
-- Pages with similar keywords are grouped into themes
-- Each page is associated with relevant themes based on keyword analysis
-- The visualization can be colored by theme to show content clusters
+- Automatically extract significant keywords from your pages
+- Group these keywords into global themes
+- Associate themes with relevant pages
+- Visualize themes in the D3.js force diagram with color coding
+
+Pages with similar content will be grouped together and colored according to their dominant theme, providing instant visual insights into your content structure.
+
+#### NLP Support
+
+- If the `cywolf/nlp-tools` extension is installed, it will be used for advanced linguistic analysis
+- If this extension is not available or encounters errors, a fallback method is automatically used
+- In all cases, relevant themes will be generated for your pages
+
+The clustering visualization works in both TYPO3 v12 and v13, and is compatible with PHP 8.1 and 8.2.
 
 ### Solr Integration
 

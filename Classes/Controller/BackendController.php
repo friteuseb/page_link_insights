@@ -63,6 +63,10 @@ class BackendController extends ActionController
         // Récupérer la configuration des colPos
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
         
+        // Forcer le rechargement des données de thème en vidant le cache approprié
+        if ($pageUid > 0) {
+            $this->clearThemeCache($pageUid);
+        }
         // Préparer les données comme d'habitude...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
@@ -95,6 +99,11 @@ class BackendController extends ActionController
         // Utiliser directement la configuration initialisée dans le constructeur
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
         
+        // Forcer le rechargement des données de thème en vidant le cache approprié
+        if ($pageUid > 0) {
+            $this->clearThemeCache($pageUid);
+        }
+
         // Préparer les données comme d'habitude...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
@@ -187,6 +196,27 @@ class BackendController extends ActionController
     {
         parent::initialize();
         $this->debug('Controller initialized');
+    }
+
+    /**
+     * Vide le cache des thèmes pour une page spécifique
+     */
+    protected function clearThemeCache(int $pageUid): void
+    {
+        try {
+            $cacheManager = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Cache\CacheManager::class);
+            $cacheIdentifier = 'themes_' . $pageUid;
+            
+            if ($cacheManager->hasCache('pages')) {
+                $pagesCache = $cacheManager->getCache('pages');
+                if ($pagesCache->has($cacheIdentifier)) {
+                    $pagesCache->remove($cacheIdentifier);
+                    $this->debug('Cache des thèmes vidé pour la page ' . $pageUid);
+                }
+            }
+        } catch (\Exception $e) {
+            $this->debug('Erreur lors de la suppression du cache des thèmes', $e->getMessage());
+        }
     }
 
     protected function debug(string $message, mixed $data = null): void

@@ -35,3 +35,15 @@ services:
   
   Cywolf\PageLinkInsights\Service\ThemeDataService:
     public: true
+
+  Cywolf\PageLinkInsights\Command\DebugContentCommand:
+    tags:
+      - name: 'console.command'
+        command: 'page-link-insights:debug-content'
+        description: 'Débogue le contenu des pages pour analyse thématique'
+
+  Cywolf\PageLinkInsights\Command\InsertFakeThemesCommand:
+    tags:
+      - name: 'console.command'
+        command: 'page-link-insights:insert-fake-themes'
+        description: 'Insère des thèmes fictifs pour toutes les pages'

@@ -1,10 +1,12 @@
 {
     "name": "cywolf/page_link_insights",
     "type": "typo3-cms-extension",
-    "description": "A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships",
+    "description": "A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships and content themes",
     "license": "GPL-2.0-or-later",
     "require": {
-        "typo3/cms-core": "^12.4 || ^13.0",
+        "typo3/cms-core": "^12.4 || ^13.0"
+    },
+    "suggest": {
         "cywolf/nlp-tools": "^1.0"
     },
     "autoload": {
@@ -20,4 +22,3 @@
     "minimum-stability": "dev",
     "prefer-stable": true
 }
-

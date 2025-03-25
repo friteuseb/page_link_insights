@@ -25,72 +25,258 @@ class ThemeDataService {
         $this->languageDetector = GeneralUtility::makeInstance(LanguageDetectionService::class);
     }
 
-    private function extractSignificantTerms(string $content, int $pageId): array
-    {
+/**
+ * Extrait les termes significatifs d'un contenu textuel
+ * 
+ * @param string $content Le contenu à analyser
+ * @param int $pageId L'ID de la page
+ * @return array Un tableau des termes significatifs avec leurs fréquences
+ */
+private function extractSignificantTerms(string $content, int $pageId): array
+{
+    try {
+        // Détecter la langue du contenu
+        $language = $this->languageDetector->detectLanguage($content);
+        
+
+        // Ajouter au début
+        $logFile = \TYPO3\CMS\Core\Core\Environment::getProjectPath() . '/var/log/theme_extraction_test.log';
+        file_put_contents($logFile, "=== Test d'extraction pour la page $pageId ===\n", FILE_APPEND);
+
+        // Quelques logs conservés pour le diagnostic
+        if ($this->debugMode) {
+            $this->logger->info('Extraction de termes pour la page ' . $pageId, [
+                'langue' => $language,
+                'longueur_contenu' => strlen($content)
+            ]);
+        }
+        
+        // Supprimer complètement les balises HTML
+        $cleanedContent = strip_tags($content);
+        
+        // Supprimer les entités HTML (comme &nbsp;)
+        $cleanedContent = html_entity_decode($cleanedContent, ENT_QUOTES, 'UTF-8');
+        
+        // Nettoyer les caractères spéciaux
+        $cleanedContent = preg_replace('/[^\p{L}\s]/u', ' ', $cleanedContent);
+        $cleanedContent = preg_replace('/\s+/', ' ', $cleanedContent);
+        
+        // Ajouter une liste personnalisée de "stopwords" liés au HTML/CSS/JS
+        $htmlStopwords = ['class', 'href', 'div', 'span', 'http', 'https', 'www', 'img', 'src'];
+        
         try {
-            // Détecter la langue du contenu
-            $language = $this->languageDetector->detectLanguage($content);
-            
-            // Supprimer complètement les balises HTML
-            $cleanedContent = strip_tags($content);
-            
-            // Supprimer les entités HTML (comme &nbsp;)
-            $cleanedContent = html_entity_decode($cleanedContent, ENT_QUOTES, 'UTF-8');
-            
-            // Nettoyer les caractères spéciaux
-            $cleanedContent = preg_replace('/[^\p{L}\s]/u', ' ', $cleanedContent);
-            $cleanedContent = preg_replace('/\s+/', ' ', $cleanedContent);
-            
-            // Ajouter une liste personnalisée de "stopwords" liés au HTML/CSS/JS
-            $htmlStopwords = ['class', 'href', 'div', 'span', 'http', 'https', 'www', 'img', 'src'];
-            
             // Tokenizer et enlever les stop words
+            file_put_contents($logFile, "Tentative d'utilisation de nlp_tools...\n", FILE_APPEND);
             $processedContent = $this->textAnalyzer->removeStopWords($cleanedContent, $language);
             $tokens = $this->textAnalyzer->tokenize($processedContent);
-
+            file_put_contents($logFile, "nlp_tools fonctionne correctement! " . count($tokens) . " tokens extraits\n", FILE_APPEND);
+            
+            
             // Vérifier si $tokens est un tableau valide
             if (!is_array($tokens)) {
-                $this->logger->error('Erreur de tokenization', [
-                    'pageId' => $pageId
-                ]);
-                $tokens = [];
-            }
-
-            // Vérifier également le résultat du stemming
-            $stemmedTokens = $this->textAnalyzer->stem($processedContent, $language);
-            if (!is_array($stemmedTokens)) {
-                $this->logger->error('Erreur de stemming', [
-                    'pageId' => $pageId
-                ]);
-                $stemmedTokens = [];
+                if ($this->debugMode) {
+                    $this->logger->warning('Erreur de tokenization, utilisation de la méthode de secours', [
+                        'pageId' => $pageId
+                    ]);
+                }
+                return $this->fallbackExtractKeywords($cleanedContent, $pageId);
             }
             
-            // Filtrer et compter les occurrences
-            $termFrequency = array_count_values(array_filter($stemmedTokens, function($token) use ($htmlStopwords) {
+            // Stocker les versions originales des tokens avant stemming
+            $originalTokens = [];
+            foreach ($tokens as $token) {
+                $tokenLower = strtolower($token);
+                if (strlen($tokenLower) > 3 && strlen($tokenLower) < 30 && !is_numeric($tokenLower) 
+                    && !preg_match('/[0-9]/', $tokenLower) && !in_array($tokenLower, $htmlStopwords)) {
+                    $originalTokens[] = $token;
+                }
+            }
+            
+            // Créer un mapping entre les stems et les tokens originaux
+            $stemToOriginalMap = [];
+            $stems = $this->textAnalyzer->stem($processedContent, $language);
+            file_put_contents($logFile, "Stemming réussi! " . count($stems) . " stems extraits\n", FILE_APPEND);
+
+            if (!is_array($stems)) {
+                if ($this->debugMode) {
+                    $this->logger->warning('Erreur de stemming, utilisation de la méthode de secours', [
+                        'pageId' => $pageId
+                    ]);
+                }
+                return $this->fallbackExtractKeywords($cleanedContent, $pageId);
+            }
+            
+            // Vérifier que les deux tableaux ont la même longueur
+            $minLength = min(count($tokens), count($stems));
+            for ($i = 0; $i < $minLength; $i++) {
+                $stem = $stems[$i];
+                $originalToken = $tokens[$i];
+                
+                // Seulement si le token original est dans notre liste filtrée
+                if (in_array($originalToken, $originalTokens)) {
+                    if (!isset($stemToOriginalMap[$stem])) {
+                        $stemToOriginalMap[$stem] = [];
+                    }
+                    $stemToOriginalMap[$stem][] = $originalToken;
+                }
+            }
+            
+            // Utiliser les stems pour le comptage de fréquence
+            $stemmedTokens = array_filter($stems, function($token) use ($htmlStopwords) {
                 return strlen($token) > 3 
                     && strlen($token) < 30 
                     && !is_numeric($token)
                     && !preg_match('/[0-9]/', $token)
                     && !in_array(strtolower($token), $htmlStopwords);
-            }));
+            });
+            
+            // Compter les occurrences des stems
+            $stemFrequency = array_count_values($stemmedTokens);
             
             // Ne garder que les termes apparaissant plus d'une fois
-            $termFrequency = array_filter($termFrequency, fn($freq) => $freq > 1);
+            $stemFrequency = array_filter($stemFrequency, fn($freq) => $freq > 1);
             
-            arsort($termFrequency);
-            return array_slice($termFrequency, 0, 15, true);
+            // Trier par fréquence
+            arsort($stemFrequency);
             
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur lors de l\'analyse du texte', [
-                'pageId' => $pageId,
-                'error' => $e->getMessage()
-            ]);
-            return [];
+            // Préparer le résultat final avec les formes originales
+            $termFrequency = [];
+            foreach (array_slice($stemFrequency, 0, 15, true) as $stem => $frequency) {
+                // Choisir la forme originale la plus fréquente (pour le moment, on prend juste la première)
+                $originalForm = isset($stemToOriginalMap[$stem]) && !empty($stemToOriginalMap[$stem]) 
+                    ? $stemToOriginalMap[$stem][0] 
+                    : $stem;
+                
+                // Mettre en majuscule la première lettre pour une meilleure présentation
+                $originalForm = ucfirst($originalForm);
+                
+                $termFrequency[$originalForm] = $frequency;
+            }
+            
+            if (count($termFrequency) === 0 && $this->debugMode) {
+                $this->logger->info('Aucun terme trouvé, utilisation de la méthode de secours', [
+                    'pageId' => $pageId
+                ]);
+                return $this->fallbackExtractKeywords($cleanedContent, $pageId);
+            }
+            
+            return $termFrequency;
+            
+        } catch (\Exception $nlpError) {
+            if ($this->debugMode) {
+                $this->logger->warning('Exception NLP: ' . $nlpError->getMessage(), [
+                    'pageId' => $pageId
+                ]);
+            }
+            file_put_contents($logFile, "ERREUR AVEC NLP-TOOLS: " . $nlpError->getMessage() . "\n", FILE_APPEND);
+            return $this->fallbackExtractKeywords($cleanedContent, $pageId);
         }
         
+    } catch (\Exception $e) {
+        $this->logger->error('Erreur lors de l\'analyse du texte', [
+            'pageId' => $pageId,
+            'error' => $e->getMessage()
+        ]);
+        
+        return $this->fallbackExtractKeywords($cleanedContent, $pageId);
+    }
+}
+
+/**
+ * Méthode de secours pour extraire des mots-clés sans utiliser NLP Tools
+ * Utilisée lorsque l'analyse NLP échoue ou ne produit pas de résultats
+ * 
+ * @param string $content Le contenu à analyser
+ * @param int $pageId L'ID de la page
+ * @return array Un tableau des termes avec leurs fréquences
+ */
+private function fallbackExtractKeywords(string $content, int $pageId): array
+{
+    if ($this->debugMode) {
+        $this->logger->info('Utilisation de la méthode de secours pour l\'extraction de mots-clés', [
+            'pageId' => $pageId
+        ]);
     }
     
-    public function getThemesForSubtree(int $pageUid): array {
+    try {
+        // Nettoyer le contenu s'il n'est pas déjà nettoyé
+        if (strpos($content, '<') !== false) {
+            $content = strip_tags($content);
+            $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
+            $content = preg_replace('/[^\p{L}\s]/u', ' ', $content);
+            $content = preg_replace('/\s+/', ' ', $content);
+        }
+        
+        // Liste de stop words basique (anglais + allemand + français)
+        $stopWords = ['a', 'an', 'the', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+                      'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'against', 'between', 'into', 'through',
+                      'der', 'die', 'das', 'und', 'oder', 'aber', 'ist', 'sind', 'war', 'waren', 'sein', 'gewesen',
+                      'in', 'auf', 'an', 'zu', 'für', 'mit', 'durch', 'über', 'unter', 'gegen', 'zwischen', 'hinein',
+                      'le', 'la', 'les', 'un', 'une', 'et', 'ou', 'mais', 'est', 'sont', 'était', 'être', 'ont',
+                      'dans', 'sur', 'pour', 'avec', 'par', 'que', 'qui', 'donc', 'alors', 'si', 'quand',
+                      'ces', 'tous', 'toutes', 'leur', 'leurs', 'votre', 'vos', 'notre', 'nos', 'mon', 'ma', 'mes'];
+        
+        // Tokenizer le texte
+        $words = preg_split('/\s+/', strtolower($content));
+        
+        // Filtrer les mots courts et les stop words
+        $filteredWords = array_filter($words, function($word) use ($stopWords) {
+            return strlen($word) > 3 && !in_array($word, $stopWords) && !is_numeric($word) && !preg_match('/[0-9]/', $word);
+        });
+        
+        // Compter les occurrences
+        $wordCount = array_count_values($filteredWords);
+        
+        // Ne garder que les termes apparaissant plus d'une fois
+        $wordCount = array_filter($wordCount, fn($freq) => $freq > 1);
+        
+        // Trier par fréquence
+        arsort($wordCount);
+        
+        // Prendre les 15 premiers mots avec mise en majuscule
+        $result = [];
+        foreach (array_slice($wordCount, 0, 15, true) as $word => $freq) {
+            $result[ucfirst($word)] = $freq;
+        }
+        
+        if (count($result) === 0) {
+            if ($this->debugMode) {
+                $this->logger->notice('Aucun mot-clé trouvé, utilisation de mots-clés génériques', [
+                    'pageId' => $pageId
+                ]);
+            }
+            
+            // Si aucun mot-clé n'est trouvé, créer des mots-clés génériques
+            return [
+                'Content' => 10,
+                'Page' => 9,
+                'Information' => 8,
+                'Website' => 7,
+                'Menu' => 6
+            ];
+        }
+        
+        return $result;
+        
+    } catch (\Exception $e) {
+        $this->logger->error('Erreur dans fallbackExtractKeywords', [
+            'message' => $e->getMessage(),
+            'pageId' => $pageId
+        ]);
+        
+        // Retourner au moins quelques mots-clés génériques pour que ça fonctionne
+        return [
+            'Content' => 10,
+            'Page' => 9,
+            'Information' => 8,
+            'Website' => 7,
+            'Menu' => 6
+        ];
+    }
+}
+    
+    public function getThemesForSubtree(int $pageUid): array
+    {
         try {
             $cacheIdentifier = 'themes_' . $pageUid;
             $cache = $this->cacheManager->getCache('pages');
@@ -229,7 +415,19 @@ class ThemeDataService {
         foreach ($pageKeywords as $pageId => $keywords) {
             // Pour chaque thème, calculer la pertinence pour cette page
             foreach ($themeIds as $themeName => $themeId) {
-                $relevance = isset($keywords[$themeName]) ? $keywords[$themeName] : 0;
+                // Chercher une correspondance exacte ou le mot-clé est contenu dans le nom du thème
+                $relevance = 0;
+                foreach ($keywords as $keyword => $frequency) {
+                    // Correspondance exacte
+                    if ($keyword === $themeName) {
+                        $relevance = $frequency;
+                        break;
+                    }
+                    // Le mot-clé fait partie du nom du thème
+                    elseif (stripos($themeName, $keyword) !== false || stripos($keyword, $themeName) !== false) {
+                        $relevance = max($relevance, $frequency * 0.8); // pondérer un peu moins pour les correspondances partielles
+                    }
+                }
                 
                 if ($relevance > 0) {
                     $connection->insert(
@@ -469,4 +667,10 @@ class ThemeDataService {
         
         return $nodes;
     }
+
+    /**
+     * Mode de débogage pour activer les logs détaillés
+     */
+    protected bool $debugMode = false;
+
 }
