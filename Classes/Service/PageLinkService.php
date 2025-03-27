@@ -115,8 +115,8 @@ class PageLinkService
                 // Utiliser le seuil de similarité défini dans Semantic Suggestion si possible
                 $queryBuilder->expr()->gt(
                     'similarity_score',
-                    $queryBuilder->createNamedParameter(0.3, \PDO::PARAM_STR) // seuil par défaut ou configurable
-                )
+                    $queryBuilder->createNamedParameter(0.3, ParameterType::STRING) // Using Doctrine ParameterType (correct)
+                    )
             )
             ->orderBy('similarity_score', 'DESC')
             ->executeQuery()
