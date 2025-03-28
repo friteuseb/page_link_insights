@@ -13,9 +13,7 @@ $EM_CONF['page_link_insights'] = [
         'depends' => [
             'typo3' => '>=12.4.0,<14.0.0',
             'php' => '>=8.1.0,<8.3.0',
+            'nlp_tools' => '>=1.2.0',
         ],
-        'suggests' => [
-            'nlp_tools' => '>=1.0.0', // Maintenant en suggestion plutôt qu'en dépendance
-        ],
-    ],
+  ],
 ];
