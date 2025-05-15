@@ -173,8 +173,47 @@ class PageLinkService
             ->fetchAllAssociative();
     }
 
-    private function getPageTreeInfo(int $rootPageId): array
-    {
+private function getPageTreeInfo(int $rootPageId): array
+{
+    $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+    $queryBuilder->getRestrictions()
+        ->removeAll()
+        ->add(new DeletedRestriction());
+        
+    if (!$this->includeHidden) {
+        $queryBuilder->getRestrictions()->add(new HiddenRestriction());
+    }
+
+    // Récupérer la page racine
+    $rootPage = $queryBuilder
+        ->select('uid', 'pid', 'title', 'doktype')
+        ->from('pages')
+        ->where(
+            $queryBuilder->expr()->eq('uid', 
+                $queryBuilder->createNamedParameter($rootPageId, Connection::PARAM_INT)
+            ),
+            // Exclure les dossiers système (254) et la corbeille (255)
+            $queryBuilder->expr()->notIn(
+                'doktype',
+                $queryBuilder->createNamedParameter([254, 255], Connection::PARAM_INT_ARRAY)
+            ),
+            $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
+        )
+        ->executeQuery()
+        ->fetchAssociative();
+
+    if (!$rootPage) {
+        return [];
+    }
+
+    $allPages = [$rootPage];
+    $pagesToProcess = [$rootPageId];
+
+    // Parcourir récursivement l'arborescence
+    while (!empty($pagesToProcess)) {
+        $currentPageIds = $pagesToProcess;
+        $pagesToProcess = [];
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         $queryBuilder->getRestrictions()
             ->removeAll()
@@ -183,18 +222,14 @@ class PageLinkService
         if (!$this->includeHidden) {
             $queryBuilder->getRestrictions()->add(new HiddenRestriction());
         }
-    
-        return $queryBuilder
+
+        $childPages = $queryBuilder
             ->select('uid', 'pid', 'title', 'doktype')
             ->from('pages')
             ->where(
-                $queryBuilder->expr()->or(
-                    $queryBuilder->expr()->eq('uid', 
-                        $queryBuilder->createNamedParameter($rootPageId, Connection::PARAM_INT)
-                    ),
-                    $queryBuilder->expr()->eq('pid', 
-                        $queryBuilder->createNamedParameter($rootPageId, ParameterType::INTEGER)
-                    )
+                $queryBuilder->expr()->in(
+                    'pid',
+                    $queryBuilder->createNamedParameter($currentPageIds, Connection::PARAM_INT_ARRAY)
                 ),
                 // Exclure les dossiers système (254) et la corbeille (255)
                 $queryBuilder->expr()->notIn(
@@ -205,7 +240,15 @@ class PageLinkService
             )
             ->executeQuery()
             ->fetchAllAssociative();
+
+        foreach ($childPages as $page) {
+            $allPages[] = $page;
+            $pagesToProcess[] = $page['uid'];
+        }
     }
+
+    return $allPages;
+}
     
     private function getAdditionalPagesInfo(array $pageIds): array
     {
