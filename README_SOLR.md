@@ -12,17 +12,7 @@ This documentation explains how to integrate internal linking analysis data (Pag
 
 ## Installation
 
-### 1. Solr Schema Configuration
-
-Add the following fields to your `schema.xml`:
-
-```xml
-<field name="pagerank_f" type="float" indexed="true" stored="true"/>
-<field name="inbound_links_i" type="int" indexed="true" stored="true"/>
-<field name="centrality_f" type="float" indexed="true" stored="true"/>
-```
-
-### 2. TypoScript Configuration
+### 1. TypoScript Configuration
 
 The extension includes a prepared TypoScript configuration. Add it to your site by:
 
@@ -55,9 +45,9 @@ To verify the metrics are properly indexed:
 1. Access the Solr admin interface
 2. Search with `*:*` to see all documents
 3. Verify the presence of fields:
-   - `pagerank_f`: Authority score of the page
-   - `inbound_links_i`: Number of incoming content links
-   - `centrality_f`: Network centrality score
+   - `pagerank_floatS`: Authority score of the page
+   - `inbound_links_intS`: Number of incoming content links
+   - `centrality_floatS`: Network centrality score
 
 ### Understanding the Scoring
 
@@ -95,8 +85,8 @@ For more complex scoring, you can modify the formula directly:
 ```typoscript
 plugin.tx_solr.search.relevance.formula = sum(
     mul(queryNorm(dismax(v:1)), 1.0),
-    mul(fieldValue(pagerank_f), 2.0),
-    mul(div(fieldValue(inbound_links_i), 100), 1.5),
+    mul(fieldValue(pagerank_floatS), 2.0),
+    mul(div(fieldValue(inbound_links_intS), 100), 1.5),
     # Add additional factors here
 )
 ```

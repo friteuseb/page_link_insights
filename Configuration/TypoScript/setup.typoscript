@@ -1,29 +1,11 @@
 plugin.tx_solr {
-    index {
-        queue {
-            pages {
-                // Ajout du processor pour les métriques
-                dataProcessing {
-                    1 = Cywolf\PageLinkInsights\Solr\PageMetricsProcessor
-                }
-
-                // Définition des champs
-                fields {
-                    pagerank_f = float
-                    inbound_links_i = integer
-                    centrality_f = float
-                }
-            }
-        }
-    }
-
     search {
         // Configuration du scoring
         sorting {
             // Ajout d'une option de tri par PageRank
             pageRankSort {
                 label = Page Rank
-                field = pagerank_f
+                field = pagerank_floatS
                 direction = desc
             }
         }
@@ -37,8 +19,8 @@ plugin.tx_solr {
             // Formule finale du score = (score de base * 1.0) + (pagerank * 2.0) + (inbound_links * 1.5)
             formula = sum(
                 mul(queryNorm(dismax(v:1)), 1.0),
-                mul(fieldValue(pagerank_f), 2.0),
-                mul(fieldValue(inbound_links_i), 1.5)
+                mul(fieldValue(pagerank_floatS), 2.0),
+                mul(fieldValue(inbound_links_intS), 1.5)
             )
         }
     }
