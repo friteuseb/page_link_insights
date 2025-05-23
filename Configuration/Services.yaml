@@ -35,3 +35,9 @@ services:
   
   Cywolf\PageLinkInsights\Service\ThemeDataService:
     public: true
+
+  Cywolf\PageLinkInsights\Event\PageMetricsEventListener:
+    tags:
+      - name: event.listener
+        identifier: 'page-link-insights/modify-documents'
+        event: ApacheSolrForTypo3\Solr\Event\Indexing\AfterPageDocumentIsCreatedForIndexingEvent
