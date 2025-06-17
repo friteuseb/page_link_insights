@@ -66,7 +66,6 @@ CREATE TABLE tx_pagelinkinsights_statistics (
     KEY site (site_root)
 );
 
-
 CREATE TABLE tx_pagelinkinsights_keywords (
     uid int(11) NOT NULL auto_increment,
     pid int(11) DEFAULT '0' NOT NULL,
@@ -76,7 +75,7 @@ CREATE TABLE tx_pagelinkinsights_keywords (
     page_uid int(11) DEFAULT '0' NOT NULL,
     keyword varchar(255) DEFAULT '' NOT NULL,
     frequency int(11) DEFAULT '0' NOT NULL,
-    weight double(11,2) DEFAULT '0.00' NOT NULL,
+    weight DOUBLE PRECISION DEFAULT '0.00' NOT NULL,
     language int(11) DEFAULT '0' NOT NULL,
     content_type varchar(50) DEFAULT '' NOT NULL, 
     
@@ -87,7 +86,6 @@ CREATE TABLE tx_pagelinkinsights_keywords (
     KEY language (language)
 );
 
-
 CREATE TABLE tx_pagelinkinsights_themes (
     uid int(11) NOT NULL auto_increment,
     pid int(11) DEFAULT '0' NOT NULL,
@@ -96,7 +94,7 @@ CREATE TABLE tx_pagelinkinsights_themes (
     
     theme_name varchar(255) DEFAULT '' NOT NULL,
     keywords text,
-    weight double(11,2) DEFAULT '0.00' NOT NULL,
+    weight DOUBLE PRECISION DEFAULT '0.00' NOT NULL,
     language int(11) DEFAULT '0' NOT NULL,
     
     PRIMARY KEY (uid),
@@ -104,7 +102,6 @@ CREATE TABLE tx_pagelinkinsights_themes (
     KEY theme (theme_name),
     KEY language (language)
 );
-
 
 CREATE TABLE tx_pagelinkinsights_page_themes (
     uid int(11) NOT NULL auto_increment,
@@ -114,7 +111,7 @@ CREATE TABLE tx_pagelinkinsights_page_themes (
     
     page_uid int(11) DEFAULT '0' NOT NULL,
     theme_uid int(11) DEFAULT '0' NOT NULL,
-    relevance double(11,2) DEFAULT '0.00' NOT NULL,
+    relevance DOUBLE PRECISION DEFAULT '0.00' NOT NULL,
     
     PRIMARY KEY (uid),
     KEY parent (pid),
