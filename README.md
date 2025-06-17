@@ -50,7 +50,7 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 ### Via Composer
 
 ```bash
-composer require cywolf/page-link-insights
+composer require cywolf/page_link_insights
 ```
 
 ### Via TYPO3 Extension Manager
