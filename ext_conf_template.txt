@@ -6,3 +6,9 @@ includeHidden = 0
 
 # cat=basic/enable; type=boolean; label=Include Semantic Suggestions
 includeSemanticSuggestions = 1
+
+# cat=advanced/enable; type=boolean; label=Include shortcut pages in diagrams
+includeShortcuts = 0
+
+# cat=advanced/enable; type=boolean; label=Include external link pages in diagrams
+includeExternalLinks = 0

@@ -17,6 +17,8 @@ class PageLinkService
     private array $extensionConfiguration;
     private array $allowedColPos;
     private bool $includeHidden;
+    private bool $includeShortcuts;
+    private bool $includeExternalLinks;
 
     public function __construct()
     {
@@ -29,6 +31,28 @@ class PageLinkService
         // Convertir les colPos en tableau d'entiers
         $this->allowedColPos = GeneralUtility::intExplode(',', $this->extensionConfiguration['colPosToAnalyze'] ?? '0', true);
         $this->includeHidden = (bool)($this->extensionConfiguration['includeHidden'] ?? false);
+        $this->includeShortcuts = (bool)($this->extensionConfiguration['includeShortcuts'] ?? false);
+        $this->includeExternalLinks = (bool)($this->extensionConfiguration['includeExternalLinks'] ?? false);
+    }
+
+    private function getExcludedDokTypes(): array
+    {
+        $excludedDokTypes = [
+            254, // System folders
+            255, // Recycler (legacy)
+            199  // Menu separators - always exclude as they don't serve content
+        ];
+
+        // Conditionally exclude shortcuts and external links
+        if (!$this->includeShortcuts) {
+            $excludedDokTypes[] = 4; // Shortcuts
+        }
+
+        if (!$this->includeExternalLinks) {
+            $excludedDokTypes[] = 3; // External links
+        }
+
+        return $excludedDokTypes;
     }
 
     public function getPageLinksForSubtree(int $pageUid): array
@@ -192,10 +216,10 @@ private function getPageTreeInfo(int $rootPageId): array
             $queryBuilder->expr()->eq('uid', 
                 $queryBuilder->createNamedParameter($rootPageId, Connection::PARAM_INT)
             ),
-            // Exclure les dossiers système (254) et la corbeille (255)
+            // Exclure les types de pages non-content (menu separators, optionally shortcuts/links)
             $queryBuilder->expr()->notIn(
                 'doktype',
-                $queryBuilder->createNamedParameter([254, 255], Connection::PARAM_INT_ARRAY)
+                $queryBuilder->createNamedParameter($this->getExcludedDokTypes(), Connection::PARAM_INT_ARRAY)
             ),
             $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
         )
@@ -231,10 +255,10 @@ private function getPageTreeInfo(int $rootPageId): array
                     'pid',
                     $queryBuilder->createNamedParameter($currentPageIds, Connection::PARAM_INT_ARRAY)
                 ),
-                // Exclure les dossiers système (254) et la corbeille (255)
+                // Exclure les types de pages non-content (menu separators, optionally shortcuts/links)
                 $queryBuilder->expr()->notIn(
                     'doktype',
-                    $queryBuilder->createNamedParameter([254, 255], Connection::PARAM_INT_ARRAY)
+                    $queryBuilder->createNamedParameter($this->getExcludedDokTypes(), Connection::PARAM_INT_ARRAY)
                 ),
                 $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
             )
@@ -276,10 +300,10 @@ private function getPageTreeInfo(int $rootPageId): array
                         \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY
                     )
                 ),
-                // Exclure les dossiers système (254) et la corbeille (255)
+                // Exclure les types de pages non-content (menu separators, optionally shortcuts/links)
                 $queryBuilder->expr()->notIn(
                     'doktype',
-                    $queryBuilder->createNamedParameter([254, 255], Connection::PARAM_INT_ARRAY)
+                    $queryBuilder->createNamedParameter($this->getExcludedDokTypes(), Connection::PARAM_INT_ARRAY)
                 ),
                 $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
             )
@@ -572,7 +596,7 @@ private function getPageTreeInfo(int $rootPageId): array
                 ->fetchAllAssociative();
     
             foreach ($subPages as $subPage) {
-                if ($subPage['doktype'] <= 4) {
+                if (!in_array($subPage['doktype'], $this->getExcludedDokTypes())) {
                     $allPages[] = $subPage;
                     $pagesToProcess[] = $subPage['uid'];
                 }
