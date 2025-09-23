@@ -74,12 +74,23 @@ class BackendController extends ActionController
         // Vérifier si l'extension semanticSuggestion est installée
         $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
         
+        // Prepare translations for JavaScript
+        $translations = [
+            'dominantThemes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.dominantThemes'),
+            'linkTypes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.linkTypes'),
+            'themes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.themes'),
+            'standardLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.standardLinks'),
+            'semanticSuggestions' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.semanticSuggestions'),
+            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks')
+        ];
+
         $view->assignMultiple([
             'data' => json_encode($data),
             'kpis' => $kpis,
             'noPageSelected' => ($pageUid === 0),
             'colPosToAnalyze' => $colPosToAnalyze,
             'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
+            'translations' => json_encode($translations),
         ]);
         
         $moduleTemplate = $this->moduleTemplateFactory->create($request);
@@ -110,7 +121,17 @@ class BackendController extends ActionController
         
         // Vérifier si l'extension semanticSuggestion est installée
         $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
-        
+
+        // Prepare translations for JavaScript
+        $translations = [
+            'dominantThemes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.dominantThemes'),
+            'linkTypes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.linkTypes'),
+            'themes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.themes'),
+            'standardLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.standardLinks'),
+            'semanticSuggestions' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.semanticSuggestions'),
+            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks')
+        ];
+
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->assignMultiple([
             'data' => json_encode($data),
@@ -118,6 +139,7 @@ class BackendController extends ActionController
             'noPageSelected' => ($pageUid === 0),
             'colPosToAnalyze' => $colPosToAnalyze,
             'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
+            'translations' => json_encode($translations),
         ]);
         
         return $moduleTemplate->renderResponse('Main');

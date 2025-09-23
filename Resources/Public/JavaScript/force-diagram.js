@@ -2,14 +2,23 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Script starting...');
 
     const dataElement = document.getElementById('diagram-data');
+    const translationsElement = document.getElementById('diagram-translations');
+
     if (!dataElement) {
         console.error('diagram-data element not found');
         return;
     }
 
+    if (!translationsElement) {
+        console.error('diagram-translations element not found');
+        return;
+    }
+
     try {
         const diagramData = JSON.parse(dataElement.textContent.trim());
+        const translations = JSON.parse(translationsElement.textContent.trim());
         console.log('Parsed data:', diagramData);
+        console.log('Parsed translations:', translations);
 
         // Calculer le nombre de liens entrants pour chaque nœud
         const incomingLinks = {};
@@ -260,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Ajouter les informations de thème si disponibles
                 if (d.themes && d.themes.length > 0) {
-                    themeHtml = '<br><strong>Thèmes:</strong><br>';
+                    themeHtml = `<br><strong>${translations.themes}</strong><br>`;
                     d.themes.slice(0, 3).forEach(theme => {
                         themeHtml += `${theme.theme} (${theme.relevance.toFixed(1)})<br>`;
                     });
@@ -346,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr("x", 0)
                 .attr("y", -10)
                 .attr("fill", "#00ff00")
-                .text("Thèmes dominants");
+                .text(translations.dominantThemes);
 
             // Éléments de la légende
             uniqueThemes.forEach((theme, i) => {
@@ -376,13 +385,13 @@ document.addEventListener('DOMContentLoaded', function() {
             .attr("x", 0)
             .attr("y", -10)
             .attr("fill", "#00ff00")
-            .text("Types de liens");
+            .text(translations.linkTypes);
 
             // Définir les types de liens pour la légende
             const linkTypes = [
-                { type: "standard", color: "#999", dash: null, label: "Standard Links" },
-                { type: "semantic", color: "#9c27b0", dash: "8,4", label: "Semantic Suggestions" },
-                { type: "broken", color: "#ff0000", dash: "5,5", label: "Broken Links" }
+                { type: "standard", color: "#999", dash: null, label: translations.standardLinks },
+                { type: "semantic", color: "#9c27b0", dash: "8,4", label: translations.semanticSuggestions },
+                { type: "broken", color: "#ff0000", dash: "5,5", label: translations.brokenLinks }
             ];
 
             // Éléments de la légende

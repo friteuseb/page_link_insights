@@ -30,6 +30,24 @@
             <trans-unit id="module.semanticDisabled">
                 <source>Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</source>
             </trans-unit>
+            <trans-unit id="diagram.legend.dominantThemes">
+                <source>Dominant Themes</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.linkTypes">
+                <source>Link Types</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.themes">
+                <source>Themes:</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.standardLinks">
+                <source>Standard Links</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.semanticSuggestions">
+                <source>Semantic Suggestions</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.brokenLinks">
+                <source>Broken Links</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>
