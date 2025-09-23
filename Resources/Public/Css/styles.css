@@ -2,7 +2,7 @@
 .module {
     background-color: #1e1e1e; /* Fond sombre */
     color: #ffffff; /* Texte blanc */
-    padding: 15px;
+    margin: 15px; /* Add outer margin for proper spacing */
     border-radius: 8px;
 }
 
@@ -17,7 +17,9 @@
 .module-body {
     background-color: #1e1e1e; /* Fond sombre pour le corps */
     color: #ffffff; /* Texte blanc */
-    padding: 15px;
+    padding: 20px; /* Increased padding for better spacing */
+    margin: 15px; /* Add margin to prevent "broken" appearance */
+    border-radius: 8px; /* Subtle rounded corners for modern look */
 }
 
 /* Style pour les éléments de chargement */
@@ -35,5 +37,12 @@
     padding: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Ombre légère */
     pointer-events: none; /* Empêche le tooltip de bloquer les interactions */
+}
 
+/* Style pour l'en-tête du module */
+.module-header {
+    margin: 15px; /* Add consistent spacing */
+    padding: 15px;
+    background-color: #2d2d2d; /* Subtle background */
+    border-radius: 8px;
 }
