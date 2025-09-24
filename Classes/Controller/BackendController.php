@@ -81,7 +81,10 @@ class BackendController extends ActionController
             'themes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.themes'),
             'standardLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.standardLinks'),
             'semanticSuggestions' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.semanticSuggestions'),
-            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks')
+            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks'),
+            'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
+            'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
+            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove')
         ];
 
         $view->assignMultiple([
@@ -129,7 +132,10 @@ class BackendController extends ActionController
             'themes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.themes'),
             'standardLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.standardLinks'),
             'semanticSuggestions' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.semanticSuggestions'),
-            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks')
+            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks'),
+            'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
+            'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
+            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove')
         ];
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);

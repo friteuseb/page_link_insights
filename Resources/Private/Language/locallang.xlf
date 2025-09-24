@@ -48,6 +48,15 @@
             <trans-unit id="diagram.legend.brokenLinks">
                 <source>Broken Links</source>
             </trans-unit>
+            <trans-unit id="diagram.tooltip.incomingLinks">
+                <source>Incoming links:</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.ctrlClickToOpen">
+                <source>Ctrl+Click to open in TYPO3</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.rightClickToRemove">
+                <source>Right-click to remove</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

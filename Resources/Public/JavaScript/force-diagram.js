@@ -279,10 +279,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     .html(`
                         <strong>${d.title}</strong><br>
                         ID: ${d.id}<br>
-                        Liens entrants: ${d.incomingLinks}
+                        ${translations.incomingLinks} ${d.incomingLinks}
                         ${themeHtml}
-                        <em>Ctrl+Clic pour ouvrir dans TYPO3<br>
-                        Clic droit pour supprimer</em>
+                        <em>${translations.ctrlClickToOpen}<br>
+                        ${translations.rightClickToRemove}</em>
                     `);
             })
             .on("mousemove", function(event) {
