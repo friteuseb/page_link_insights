@@ -14,11 +14,11 @@ class AnalyzeLinksTaskAdditionalFieldProvider extends AbstractAdditionalFieldPro
     {
         $additionalFields = [];
         
-        // Initialiser la valeur soit depuis la tâche existante, soit avec la valeur par défaut
+        // Initialize the value either from the existing task or with the default value
         if ($task instanceof AnalyzeLinksTask) {
             $taskInfo['rootPageId'] = $task->rootPageId;
         } else {
-            $taskInfo['rootPageId'] = 1; // Valeur par défaut
+            $taskInfo['rootPageId'] = 1; // Default value
         }
 
         $fieldId = 'task_rootPageId';

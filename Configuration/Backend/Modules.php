@@ -16,7 +16,7 @@ $moduleConfig = [
     'navigationComponentId' => 'TYPO3/CMS/Backend/PageTree/PageTreeElement',
 ];
 
-// Configuration spécifique à la version
+// Version-specific configuration
 if ($isVersion13) {
     $moduleConfig['extensionName'] = 'PageLinkInsights';
     $moduleConfig['controllerActions'] = [
@@ -25,7 +25,7 @@ if ($isVersion13) {
         ],
     ];
 } else {
-    // Pour TYPO3 v12 - définir les routes explicitement
+    // For TYPO3 v12 - define routes explicitly
     $moduleConfig['routes'] = [
         '_default' => [
             'target' => \Cywolf\PageLinkInsights\Controller\BackendController::class . '::mainActionV12'

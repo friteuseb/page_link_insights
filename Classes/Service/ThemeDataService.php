@@ -30,20 +30,20 @@ class ThemeDataService {
  * 
  * @param string $content Le contenu à analyser
  * @param int $pageId L'ID de la page
- * @return array Un tableau des termes significatifs avec leurs fréquences
+ * @return array An array of significant terms with their frequencies
  */
 private function extractSignificantTerms(string $content, int $pageId): array
 {
     try {
-        // Détecter la langue du contenu
+        // Detect the language of the content
         $language = $this->languageDetector->detectLanguage($content);
         
 
-        // Ajouter au début
+        // Add at the beginning
         $logFile = \TYPO3\CMS\Core\Core\Environment::getProjectPath() . '/var/log/theme_extraction_test.log';
         file_put_contents($logFile, "=== Test d'extraction pour la page $pageId ===\n", FILE_APPEND);
 
-        // Quelques logs conservés pour le diagnostic
+        // Some logs kept for diagnosis
         if ($this->debugMode) {
             $this->logger->info('Extraction de termes pour la page ' . $pageId, [
                 'langue' => $language,
@@ -51,10 +51,10 @@ private function extractSignificantTerms(string $content, int $pageId): array
             ]);
         }
         
-        // Supprimer complètement les balises HTML
+        // Completely remove HTML tags
         $cleanedContent = strip_tags($content);
         
-        // Supprimer les entités HTML (comme &nbsp;)
+        // Remove HTML entities (like &nbsp;)
         $cleanedContent = html_entity_decode($cleanedContent, ENT_QUOTES, 'UTF-8');
         
         // Nettoyer les caractères spéciaux
@@ -95,7 +95,7 @@ private function extractSignificantTerms(string $content, int $pageId): array
             // Créer un mapping entre les stems et les tokens originaux
             $stemToOriginalMap = [];
             $stems = $this->textAnalyzer->stem($processedContent, $language);
-            file_put_contents($logFile, "Stemming réussi! " . count($stems) . " stems extraits\n", FILE_APPEND);
+             file_put_contents($logFile, "Stemming successful! " . count($stems) . " stems extracted\n", FILE_APPEND);
 
             if (!is_array($stems)) {
                 if ($this->debugMode) {
@@ -106,13 +106,13 @@ private function extractSignificantTerms(string $content, int $pageId): array
                 return $this->fallbackExtractKeywords($cleanedContent, $pageId);
             }
             
-            // Vérifier que les deux tableaux ont la même longueur
+            // Check that both arrays have the same length
             $minLength = min(count($tokens), count($stems));
             for ($i = 0; $i < $minLength; $i++) {
                 $stem = $stems[$i];
                 $originalToken = $tokens[$i];
                 
-                // Seulement si le token original est dans notre liste filtrée
+                // Only if the original token is in our filtered list
                 if (in_array($originalToken, $originalTokens)) {
                     if (!isset($stemToOriginalMap[$stem])) {
                         $stemToOriginalMap[$stem] = [];
@@ -121,7 +121,7 @@ private function extractSignificantTerms(string $content, int $pageId): array
                 }
             }
             
-            // Utiliser les stems pour le comptage de fréquence
+            // Use the stems for frequency counting
             $stemmedTokens = array_filter($stems, function($token) use ($htmlStopwords) {
                 return strlen($token) > 3 
                     && strlen($token) < 30 
@@ -136,25 +136,25 @@ private function extractSignificantTerms(string $content, int $pageId): array
             // Ne garder que les termes apparaissant plus d'une fois
             $stemFrequency = array_filter($stemFrequency, fn($freq) => $freq > 1);
             
-            // Trier par fréquence
+            // Sort by frequency
             arsort($stemFrequency);
             
-            // Préparer le résultat final avec les formes originales
+            // Prepare the final result with original forms
             $termFrequency = [];
             foreach (array_slice($stemFrequency, 0, 15, true) as $stem => $frequency) {
-                // Choisir la forme originale la plus fréquente (pour le moment, on prend juste la première)
+                // Choose the most frequent original form (for now, we just take the first one)
                 $originalForm = isset($stemToOriginalMap[$stem]) && !empty($stemToOriginalMap[$stem]) 
                     ? $stemToOriginalMap[$stem][0] 
                     : $stem;
                 
-                // Mettre en majuscule la première lettre pour une meilleure présentation
+                // Capitalize the first letter for better presentation
                 $originalForm = ucfirst($originalForm);
                 
                 $termFrequency[$originalForm] = $frequency;
             }
             
             if (count($termFrequency) === 0 && $this->debugMode) {
-                $this->logger->info('Aucun terme trouvé, utilisation de la méthode de secours', [
+                $this->logger->info('No term found, using fallback method', [
                     'pageId' => $pageId
                 ]);
                 return $this->fallbackExtractKeywords($cleanedContent, $pageId);
@@ -183,23 +183,23 @@ private function extractSignificantTerms(string $content, int $pageId): array
 }
 
 /**
- * Méthode de secours pour extraire des mots-clés sans utiliser NLP Tools
- * Utilisée lorsque l'analyse NLP échoue ou ne produit pas de résultats
+ * Fallback method to extract keywords without using NLP Tools
+ * Used when NLP analysis fails or produces no results
  * 
  * @param string $content Le contenu à analyser
  * @param int $pageId L'ID de la page
- * @return array Un tableau des termes avec leurs fréquences
+ * @return array An array of terms with their frequencies
  */
 private function fallbackExtractKeywords(string $content, int $pageId): array
 {
     if ($this->debugMode) {
-        $this->logger->info('Utilisation de la méthode de secours pour l\'extraction de mots-clés', [
+        $this->logger->info('Using fallback method for keyword extraction', [
             'pageId' => $pageId
         ]);
     }
     
     try {
-        // Nettoyer le contenu s'il n'est pas déjà nettoyé
+        // Clean the content if it's not already cleaned
         if (strpos($content, '<') !== false) {
             $content = strip_tags($content);
             $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
@@ -207,7 +207,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             $content = preg_replace('/\s+/', ' ', $content);
         }
         
-        // Liste de stop words basique (anglais + allemand + français)
+        // Basic list of stop words (English + German + French)
         $stopWords = ['a', 'an', 'the', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
                       'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'against', 'between', 'into', 'through',
                       'der', 'die', 'das', 'und', 'oder', 'aber', 'ist', 'sind', 'war', 'waren', 'sein', 'gewesen',
@@ -241,7 +241,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         
         if (count($result) === 0) {
             if ($this->debugMode) {
-                $this->logger->notice('Aucun mot-clé trouvé, utilisation de mots-clés génériques', [
+                $this->logger->notice('No keyword found, using generic keywords', [
                     'pageId' => $pageId
                 ]);
             }
@@ -281,13 +281,13 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             $cacheIdentifier = 'themes_' . $pageUid;
             $cache = $this->cacheManager->getCache('pages');
             
-            // Essayer de récupérer du cache
+            // Try to retrieve from cache
             $themeData = $cache->get($cacheIdentifier);
             if ($themeData) {
                 return $themeData;
             }
             
-            // Récupérer toutes les pages du sous-arbre
+            // Retrieve all pages in the subtree
             $pageIds = $this->getSubtreePageIds($pageUid);
             
             // Récupérer les données
@@ -317,7 +317,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
 
     public function analyzePageContent(int $pageUid): void {
         try {
-            // Récupérer toutes les pages du sous-arbre
+            // Retrieve all pages in the subtree
             $pageIds = $this->getSubtreePageIds($pageUid);
             
             // Récupérer le contenu des pages
@@ -326,19 +326,19 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             // 1. Analyse des mots-clés par page
             $pageKeywords = [];
             foreach ($pageContents as $pid => $content) {
-                // Correction : On passe maintenant le $pid comme second paramètre
+                // Correction: We now pass $pid as the second parameter
                 $keywords = $this->extractSignificantTerms($content, $pid);
                 $this->saveKeywords($pid, $keywords);
                 $pageKeywords[$pid] = $keywords;
             }
             
-            // 2. Identifier les thèmes globaux
+            // 2. Identify global themes
             $globalThemes = $this->identifyThemes($pageKeywords);
             
             // 3. Sauvegarder les thèmes
             $themeIds = $this->saveThemes($globalThemes);
             
-            // 4. Créer les associations pages-thèmes
+            // 4. Create page-theme associations
             $this->createPageThemeAssociations($pageKeywords, $themeIds);
             
             $this->logger->info('Analyse thématique terminée', [
@@ -423,9 +423,9 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                         $relevance = $frequency;
                         break;
                     }
-                    // Le mot-clé fait partie du nom du thème
+                    // The keyword is part of the theme name
                     elseif (stripos($themeName, $keyword) !== false || stripos($keyword, $themeName) !== false) {
-                        $relevance = max($relevance, $frequency * 0.8); // pondérer un peu moins pour les correspondances partielles
+                        $relevance = max($relevance, $frequency * 0.8); // weight a bit less for partial matches
                     }
                 }
                 
@@ -450,7 +450,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         
-        // D'abord récupérer la page racine
+        // First retrieve the root page
         $rootPage = $queryBuilder
             ->select('uid')
             ->from('pages')
@@ -469,7 +469,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         $allPageIds = [$rootPage['uid']];
         $pagesToProcess = [$rootPage['uid']];
         
-        // Parcourir récursivement l'arborescence
+        // Traverse the tree recursively
         while (!empty($pagesToProcess)) {
             $currentPageIds = $pagesToProcess;
             $pagesToProcess = [];
@@ -565,7 +565,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             return [];
         }
         
-        // Récupérer la configuration colPos depuis l'extension
+        // Retrieve the colPos configuration from the extension
         $extensionConfiguration = GeneralUtility::makeInstance(ExtensionConfiguration::class);
         $config = $extensionConfiguration->get('page_link_insights');
         $allowedColPos = GeneralUtility::intExplode(',', $config['colPosToAnalyze'] ?? '0', true);
@@ -653,10 +653,10 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             $pageUid = $node['id'];
             
             if (isset($themeData['pageThemes'][$pageUid])) {
-                // Ajouter les thèmes principaux de la page
+                // Add the main themes of the page
                 $node['themes'] = $themeData['pageThemes'][$pageUid];
                 
-                // Ajouter le thème dominant (celui avec la plus haute pertinence)
+                // Add the dominant theme (the one with the highest relevance)
                 $dominantTheme = reset($themeData['pageThemes'][$pageUid]);
                 $node['mainTheme'] = [
                     'name' => $dominantTheme['theme'],
@@ -669,7 +669,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
     }
 
     /**
-     * Mode de débogage pour activer les logs détaillés
+     * Debug mode to enable detailed logs
      */
     protected bool $debugMode = false;
 

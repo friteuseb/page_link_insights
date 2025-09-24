@@ -24,7 +24,7 @@ class PageLinkService
     {
         $this->connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
         
-        // Récupérer la configuration de l'extension
+        // Retrieve the extension configuration
         $this->extensionConfiguration = GeneralUtility::makeInstance(ExtensionConfiguration::class)
             ->get('page_link_insights');
             
@@ -90,14 +90,14 @@ class PageLinkService
             $pages = array_merge($pages, $additionalPages);
         }
     
-        // Marquer les liens brisés
+        // Mark broken links
         $pageIds = array_column($pages, 'uid');
         $allLinks = array_map(function($link) use ($pageIds) {
             $link['broken'] = !in_array($link['sourcePageId'], $pageIds) || !in_array($link['targetPageId'], $pageIds);
             return $link;
         }, $allLinks);
     
-        // Ajouter le logging pour les liens brisés
+        // Add logging for broken links
         $brokenLinks = array_filter($allLinks, function($link) use ($pageIds) {
             return !in_array($link['sourcePageId'], $pageIds) || !in_array($link['targetPageId'], $pageIds);
         });
@@ -136,7 +136,7 @@ class PageLinkService
                     'page_id',
                     $queryBuilder->createNamedParameter($pageUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
                 ),
-                // Utiliser le seuil de similarité défini dans Semantic Suggestion si possible
+                // Use the similarity threshold defined in Semantic Suggestion if possible
                 $queryBuilder->expr()->gt(
                     'similarity_score',
                     $queryBuilder->createNamedParameter(0.3, ParameterType::STRING) // Using Doctrine ParameterType (correct)
@@ -151,10 +151,10 @@ class PageLinkService
                 'sourcePageId' => (string)$similarity['page_id'],
                 'targetPageId' => (string)$similarity['similar_page_id'],
                 'contentElement' => [
-                    'uid' => 0, // Pas d'élément de contenu spécifique
+                    'uid' => 0, // No specific content element
                     'type' => 'semantic_suggestion',
                     'header' => 'Semantic Suggestion',
-                    'colPos' => -1 // Valeur spéciale pour indiquer que c'est une suggestion
+                    'colPos' => -1 // Special value to indicate it's a suggestion
                 ],
                 'similarity' => $similarity['similarity_score'],
                 'isSemantic' => true
@@ -221,7 +221,7 @@ private function getPageTreeInfo(int $rootPageId): array
                 'doktype',
                 $queryBuilder->createNamedParameter($this->getExcludedDokTypes(), Connection::PARAM_INT_ARRAY)
             ),
-            $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
+            $queryBuilder->expr()->eq('sys_language_uid', 0) // Filter on default language
         )
         ->executeQuery()
         ->fetchAssociative();
@@ -233,7 +233,7 @@ private function getPageTreeInfo(int $rootPageId): array
     $allPages = [$rootPage];
     $pagesToProcess = [$rootPageId];
 
-    // Parcourir récursivement l'arborescence
+        // Traverse the tree recursively
     while (!empty($pagesToProcess)) {
         $currentPageIds = $pagesToProcess;
         $pagesToProcess = [];
@@ -260,7 +260,7 @@ private function getPageTreeInfo(int $rootPageId): array
                     'doktype',
                     $queryBuilder->createNamedParameter($this->getExcludedDokTypes(), Connection::PARAM_INT_ARRAY)
                 ),
-                $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
+                $queryBuilder->expr()->eq('sys_language_uid', 0) // Filter on default language
             )
             ->executeQuery()
             ->fetchAllAssociative();
@@ -305,7 +305,7 @@ private function getPageTreeInfo(int $rootPageId): array
                     'doktype',
                     $queryBuilder->createNamedParameter($this->getExcludedDokTypes(), Connection::PARAM_INT_ARRAY)
                 ),
-                $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
+                $queryBuilder->expr()->eq('sys_language_uid', 0) // Filter on default language
             )
             ->executeQuery()
             ->fetchAllAssociative();
@@ -352,9 +352,9 @@ private function getPageTreeInfo(int $rootPageId): array
             $queryBuilder->getRestrictions()->add(new HiddenRestriction());
         }
 
-        // Récupérer tous les champs qui peuvent contenir des liens
+        // Retrieve all fields that can contain links
         $contentElements = $queryBuilder
-            ->select('*')  // On récupère tous les champs pour ne rien manquer
+            ->select('*')  // We retrieve all fields to miss nothing
             ->from('tt_content')
             ->where(
                 $queryBuilder->expr()->in(
@@ -373,12 +373,12 @@ private function getPageTreeInfo(int $rootPageId): array
             // Analyser chaque champ du contenu pour trouver des liens
             foreach ($content as $fieldName => $fieldValue) {
                 if (is_string($fieldValue) && !empty($fieldValue)) {
-                    // Vérifier les liens dans le texte
+                    // Check links in the text
                     $this->processTextLinks($fieldValue, $content, $links);
                 }
             }
 
-            // Traitement spécial pour les contenus avec des pages référencées
+            // Special processing for contents with referenced pages
             if (str_starts_with($content['CType'], 'menu_') || 
                 !empty($content['pages']) || 
                 str_contains($content['CType'], 'list')) {
@@ -386,7 +386,7 @@ private function getPageTreeInfo(int $rootPageId): array
             }
         }
 
-            // Ajouter les liens de suggestion sémantique
+            // Add semantic suggestion links
             if ($this->isSemanticSuggestionInstalled()) {
                 $semanticLinks = $this->getSemanticSuggestionLinks($pageUids);
                 $links = array_merge($links, $semanticLinks);
@@ -425,7 +425,7 @@ private function getPageTreeInfo(int $rootPageId): array
             }
         }
         
-        // Liens directs vers les pages (utilisés dans certains plugins)
+        // Direct links to pages (used in some plugins)
         if (preg_match_all('/(?:^|[^\d])(\d+)(?:[^\d]|$)/', $content, $matches)) {
             foreach ($matches[1] as $potentialUid) {
                 if ($this->isValidPageUid((int)$potentialUid)) {
@@ -453,7 +453,7 @@ private function getPageTreeInfo(int $rootPageId): array
     }
 
     private function processMenuElement(array $content, array &$links): void    {
-            // Vérifier que l'élément est dans une colPos autorisée
+            // Check that the element is in an allowed colPos
     if (!in_array($content['colPos'], $this->allowedColPos)) {
         return;
     }
@@ -472,13 +472,13 @@ private function getPageTreeInfo(int $rootPageId): array
                 
             case 'menu_sitemap':
             case 'menu_sitemap_pages':
-                // Pour un sitemap, on récupère toutes les pages depuis la racine
+                // For a sitemap, we retrieve all pages from the root
                 $rootLine = $this->getRootLine((int)$content['pid']);
                 if (!empty($rootLine)) {
                     $rootPageUid = $rootLine[0]['uid'];
                     $allPages = $this->getAllPagesFromRoot($rootPageUid);
                     foreach ($allPages as $page) {
-                        if ($page['uid'] !== $content['pid']) { // Éviter l'auto-référence
+                        if ($page['uid'] !== $content['pid']) { // Avoid self-reference
                             $this->addLink($content, (string)$page['uid'], $links);
                         }
                     }
@@ -526,7 +526,7 @@ private function getPageTreeInfo(int $rootPageId): array
                 $rootLine[] = $page;
                 $currentPage = $page['pid'];
                 
-                // Si on atteint une page racine (doktype=1), on s'arrête
+                // If we reach a root page (doktype=1), we stop
                 if ($page['doktype'] === 1) {
                     break;
                 }
@@ -557,7 +557,7 @@ private function getPageTreeInfo(int $rootPageId): array
                     'uid',
                     $queryBuilder->createNamedParameter($rootPageUid, Connection::PARAM_INT)
                 ),
-                $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
+                $queryBuilder->expr()->eq('sys_language_uid', 0) // Filter on default language
             )
             ->executeQuery()
             ->fetchAssociative();
@@ -590,7 +590,7 @@ private function getPageTreeInfo(int $rootPageId): array
                         'pid',
                         $queryBuilder->createNamedParameter($currentPageUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
                     ),
-                    $queryBuilder->expr()->eq('sys_language_uid', 0) // Filtrer sur la langue par défaut
+                    $queryBuilder->expr()->eq('sys_language_uid', 0) // Filter on default language
                 )
                 ->executeQuery()
                 ->fetchAllAssociative();

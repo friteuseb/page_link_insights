@@ -36,7 +36,7 @@ class BackendController extends ActionController
     // Pour TYPO3 v13 - Interface Extbase ActionController
     public function mainAction(): ResponseInterface
     {
-        // Si nous sommes en v13, utiliser cette implémentation
+        // If we are in v13, use this implementation
         if ($this->isVersion13) {
             return $this->renderForV13();
         }
@@ -60,18 +60,18 @@ class BackendController extends ActionController
         
         $pageUid = (int)($request->getQueryParams()['id'] ?? 0);
         
-        // Récupérer la configuration des colPos
+        // Retrieve the colPos configuration
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
         
-        // Forcer le rechargement des données de thème en vidant le cache approprié
+        // Force reloading of theme data by clearing the appropriate cache
         if ($pageUid > 0) {
             $this->clearThemeCache($pageUid);
         }
-        // Préparer les données comme d'habitude...
+        // Prepare the data as usual...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
         
-        // Vérifier si l'extension semanticSuggestion est installée
+        // Check if the semanticSuggestion extension is installed
         $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
         
         // Prepare translations for JavaScript
@@ -134,19 +134,19 @@ class BackendController extends ActionController
         
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
         
-        // Utiliser directement la configuration initialisée dans le constructeur
+        // Use the configuration directly initialized in the constructor
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
         
-        // Forcer le rechargement des données de thème en vidant le cache approprié
+        // Force reloading of theme data by clearing the appropriate cache
         if ($pageUid > 0) {
             $this->clearThemeCache($pageUid);
         }
 
-        // Préparer les données comme d'habitude...
+        // Prepare the data as usual...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
         
-        // Vérifier si l'extension semanticSuggestion est installée
+        // Check if the semanticSuggestion extension is installed
         $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
 
         // Prepare translations for JavaScript
@@ -209,10 +209,10 @@ class BackendController extends ActionController
         try {
             $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
             
-            // Récupérer les données thématiques
+            // Retrieve the thematic data
             $themeData = $this->themeDataService->getThemesForSubtree($pageUid);
             
-            // Enrichir les nœuds avec les informations thématiques
+            // Enrich the nodes with thematic information
             $data['nodes'] = $this->themeDataService->enrichNodesWithThemes($data['nodes'], $themeData);
             
             return $data;
@@ -226,7 +226,7 @@ class BackendController extends ActionController
     {
         $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
         
-        // Récupérer la dernière analyse effectuée (la plus récente)
+        // Retrieve the last analysis performed (the most recent)
         $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_statistics');
         $statistics = $queryBuilder
             ->select('*')
@@ -238,7 +238,7 @@ class BackendController extends ActionController
 
         $this->debug('Statistics Data', $statistics);
 
-        // Si nous avons des statistiques, les renvoyer, sinon retourner des valeurs par défaut
+        // If we have statistics, return them, otherwise return default values
         if ($statistics) {
             return [
                 'hasStatistics' => true,
@@ -278,7 +278,7 @@ class BackendController extends ActionController
     }
 
     /**
-     * Vide le cache des thèmes pour une page spécifique
+     * Clears the theme cache for a specific page
      */
     protected function clearThemeCache(int $pageUid): void
     {
@@ -290,11 +290,11 @@ class BackendController extends ActionController
                 $pagesCache = $cacheManager->getCache('pages');
                 if ($pagesCache->has($cacheIdentifier)) {
                     $pagesCache->remove($cacheIdentifier);
-                    $this->debug('Cache des thèmes vidé pour la page ' . $pageUid);
+                    $this->debug('Theme cache cleared for page ' . $pageUid);
                 }
             }
         } catch (\Exception $e) {
-            $this->debug('Erreur lors de la suppression du cache des thèmes', $e->getMessage());
+            $this->debug('Error deleting theme cache', $e->getMessage());
         }
     }
 

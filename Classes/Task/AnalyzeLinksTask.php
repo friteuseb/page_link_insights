@@ -11,7 +11,7 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 
 class AnalyzeLinksTask extends AbstractTask
 {
-    public int $rootPageId = 1;  // Page racine par défaut
+    public int $rootPageId = 1;  // Default root page
     
     public function execute(): bool
     {
@@ -21,14 +21,14 @@ class AnalyzeLinksTask extends AbstractTask
             $metricsService = GeneralUtility::makeInstance(PageMetricsService::class);
             $metricsService->analyzeSite($this->rootPageId);
             
-            // Nouvelle analyse thématique
+            // New thematic analysis
             /** @var ThemeDataService $themeService */
             $themeService = GeneralUtility::makeInstance(ThemeDataService::class);
             
-            // Nettoyer les anciennes données
+            // Clean old data
             $this->cleanOldThemeData();
             
-            // Analyser et stocker les nouvelles données thématiques
+            // Analyze and store new thematic data
             $themeService->analyzePageContent($this->rootPageId);
             
             return true;
@@ -42,7 +42,7 @@ class AnalyzeLinksTask extends AbstractTask
     {
         $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
         
-        // Supprimer les données de plus de 30 jours
+        // Delete data older than 30 days
         $threshold = time() - (30 * 24 * 60 * 60);
         
         $tables = [

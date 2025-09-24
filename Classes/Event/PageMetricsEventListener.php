@@ -22,7 +22,7 @@ class PageMetricsEventListener
         if($dataFIelds['type'] == 'pages'){
             $pageUid = (int)$dataFIelds['uid'];
 
-            // Récupérer les métriques de la page
+            // Retrieve the page metrics
             $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
                 ->getQueryBuilderForTable('tx_pagelinkinsights_pageanalysis');
 

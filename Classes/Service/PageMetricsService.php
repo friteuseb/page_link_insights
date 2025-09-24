@@ -16,14 +16,14 @@ class PageMetricsService {
     }
 
     public function analyzeSite(int $rootPageId): void {
-        // Récupérer les données de liens via le service existant
+        // Retrieve link data via the existing service
         $networkData = $this->pageLinkService->getPageLinksForSubtree($rootPageId);
         
-        // Calculer les métriques
+        // Calculate metrics
         $pageMetrics = $this->calculatePageMetrics($networkData);
         $globalStats = $this->calculateGlobalStats($networkData);
         
-        // Sauvegarder les données
+        // Save the data
         $this->persistPageMetrics($pageMetrics);
         $this->persistLinkData($networkData['links']);
         $this->persistGlobalStats($globalStats, $rootPageId);
@@ -34,7 +34,7 @@ class PageMetricsService {
         $nodes = $networkData['nodes'];
         $links = $networkData['links'];
         
-        // Préparer les compteurs
+        // Prepare counters
         $inboundLinks = [];
         $outboundLinks = [];
         $brokenLinks = [];
@@ -56,7 +56,7 @@ class PageMetricsService {
             }
             $inboundLinks[$targetId]++;
             
-            // Liens cassés
+            // Broken links
             if ($link['broken']) {
                 if (!isset($brokenLinks[$sourceId])) {
                     $brokenLinks[$sourceId] = 0;
@@ -68,7 +68,7 @@ class PageMetricsService {
         // Calculer le PageRank
         $pageRanks = $this->calculatePageRank($nodes, $links);
         
-        // Assembler les métriques par page
+        // Assemble metrics per page
         foreach ($nodes as $node) {
             $pageId = $node['id'];
             $pageMetrics[$pageId] = [
@@ -93,7 +93,7 @@ class PageMetricsService {
             $pageRank[$node['id']] = 1 / $numNodes;
         }
         
-        // Itérations de l'algorithme
+        // Algorithm iterations
         for ($i = 0; $i < $iterations; $i++) {
             $newRank = [];
             
@@ -146,7 +146,7 @@ class PageMetricsService {
             }
         }
         
-        // Calculer la densité du réseau
+        // Calculate network density
         $maxPossibleLinks = $totalPages * ($totalPages - 1);
         $networkDensity = $maxPossibleLinks > 0 ? $totalLinks / $maxPossibleLinks : 0;
         
