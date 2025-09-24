@@ -113,7 +113,11 @@
             </f:if>
 
             <!-- Force Diagram -->
-            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e;">
+            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e; position: relative;">
+                <!-- Fit to Window Button -->
+                <button id="fit-to-window-btn" class="btn btn-default fit-to-window-button" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+                    <i class="fa fa-expand"></i> <span class="btn-text" data-translation="fitToWindow"></span>
+                </button>
                 <svg id="force-diagram" class="w-full h-full"></svg>
                 <script id="diagram-data" type="application/json">
                     <f:format.raw>{data}</f:format.raw>

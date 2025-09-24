@@ -77,3 +77,43 @@
         height: calc(100vh - 120px) !important;
     }
 }
+
+/* Fit to Window Button Styles */
+.fit-to-window-button {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.fit-to-window-button:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+.fit-to-window-button:active {
+    background-color: #1d1d1d;
+}
+
+.fit-to-window-button i {
+    margin-right: 6px;
+}
+
+/* Responsive button adjustments */
+@media (max-width: 768px) {
+    .fit-to-window-button {
+        font-size: 11px;
+        padding: 6px 10px;
+        top: 5px !important;
+        right: 5px !important;
+    }
+
+    .fit-to-window-button .btn-text {
+        display: none; /* Show only icon on mobile */
+    }
+}

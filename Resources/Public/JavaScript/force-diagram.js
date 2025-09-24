@@ -133,14 +133,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log('Valid links:', validLinks);
 
+        // Create custom force to keep isolated nodes closer to main graph
+        function forceIsolatedNodes() {
+            const strength = 0.1;
+            let nodes;
+
+            function force(alpha) {
+                // Find connected nodes (those with links)
+                const connectedNodeIds = new Set();
+                validLinks.forEach(link => {
+                    connectedNodeIds.add(link.source.id || link.source);
+                    connectedNodeIds.add(link.target.id || link.target);
+                });
+
+                // Calculate center of connected nodes
+                const connectedNodes = nodes.filter(d => connectedNodeIds.has(d.id));
+                if (connectedNodes.length === 0) return;
+
+                const centerX = d3.mean(connectedNodes, d => d.x) || width / 2;
+                const centerY = d3.mean(connectedNodes, d => d.y) || height / 2;
+
+                // Apply force to isolated nodes to stay closer to center
+                nodes.forEach(d => {
+                    if (!connectedNodeIds.has(d.id)) {
+                        const dx = centerX - d.x;
+                        const dy = centerY - d.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // Only apply force if node is too far from center
+                        if (distance > 200) {
+                            d.vx += dx * strength * alpha;
+                            d.vy += dy * strength * alpha;
+                        }
+                    }
+                });
+            }
+
+            force.initialize = (_nodes) => nodes = _nodes;
+            return force;
+        }
+
         // Créer la simulation de forces
         const simulation = d3.forceSimulation(diagramData.nodes)
             .force("link", d3.forceLink(validLinks) // Utiliser uniquement les liens valides
                 .id(d => d.id)
                 .distance(150))
-            .force("charge", d3.forceManyBody().strength(-1000))
+            .force("charge", d3.forceManyBody().strength(-800)) // Reduced strength for better layout
             .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collide", d3.forceCollide().radius(d => nodeScale(d.incomingLinks) + 10));
+            .force("collide", d3.forceCollide().radius(d => nodeScale(d.incomingLinks) + 10))
+            .force("isolatedNodes", forceIsolatedNodes()); // Keep isolated nodes closer
 
         // Fonction pour créer des clusters basés sur les thèmes
         function forceCluster() {
@@ -492,6 +533,41 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('resize', () => {
             updateLegendsPosition();
         });
+
+        // Initialize fit-to-window button
+        function initializeFitButton() {
+            const fitButton = document.getElementById('fit-to-window-btn');
+            const buttonText = fitButton.querySelector('.btn-text');
+
+            if (buttonText && translations.fitToWindow) {
+                buttonText.textContent = translations.fitToWindow;
+            }
+
+            if (fitButton) {
+                fitButton.addEventListener('click', fitToWindow);
+            }
+        }
+
+        // Fit all nodes to window viewport
+        function fitToWindow() {
+            const bounds = g.node().getBBox();
+            const fullWidth = width;
+            const fullHeight = height;
+            const widthScale = fullWidth / bounds.width;
+            const heightScale = fullHeight / bounds.height;
+            const scale = Math.min(widthScale, heightScale) * 0.8; // 80% to add padding
+
+            const centerX = bounds.x + bounds.width / 2;
+            const centerY = bounds.y + bounds.height / 2;
+            const translate = [fullWidth / 2 - scale * centerX, fullHeight / 2 - scale * centerY];
+
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+        }
+
+        // Initialize the fit button
+        initializeFitButton();
 
         function drag(simulation) {
             function dragstarted(event) {

@@ -84,7 +84,8 @@ class BackendController extends ActionController
             'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks'),
             'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
             'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
-            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove')
+            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove'),
+            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow')
         ];
 
         $view->assignMultiple([
@@ -135,7 +136,8 @@ class BackendController extends ActionController
             'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks'),
             'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
             'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
-            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove')
+            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove'),
+            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow')
         ];
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
