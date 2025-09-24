@@ -132,3 +132,129 @@
 .statistics-notice .text-muted {
     color: #6c757d !important;
 }
+
+/* Help Panel Styles */
+.help-button {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.help-button:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+.help-panel {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    width: 350px;
+    max-height: 500px;
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+    overflow-y: auto;
+}
+
+.help-panel-header {
+    background-color: #1e1e1e;
+    padding: 10px 15px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+}
+
+.help-panel-header h4 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.help-panel-content {
+    padding: 15px;
+    color: #ffffff;
+}
+
+.help-section {
+    margin-bottom: 20px;
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h5 {
+    margin: 0 0 8px 0;
+    color: #00ff00;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.help-section p {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.help-section ul {
+    margin: 0;
+    padding-left: 15px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.help-section li {
+    margin-bottom: 4px;
+}
+
+.help-example {
+    margin: 8px 0;
+    text-align: center;
+}
+
+.help-color-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 11px;
+}
+
+.help-color-swatch {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    margin-right: 8px;
+    border: 1px solid #555;
+}
+
+/* Responsive adjustments for help panel */
+@media (max-width: 768px) {
+    .help-panel {
+        width: calc(100vw - 20px);
+        right: 10px;
+        left: 10px;
+        max-height: 400px;
+    }
+
+    .help-button .btn-text {
+        display: none;
+    }
+
+    .diagram-controls {
+        top: 5px !important;
+        right: 5px !important;
+    }
+}

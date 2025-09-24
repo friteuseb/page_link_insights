@@ -569,8 +569,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize the fit button
         initializeFitButton();
 
-        // Initialize statistics notice translations
-        function initializeStatisticsNotice() {
+        // Initialize translations for all elements
+        function initializeTranslations() {
+            // Handle data-translation attributes
             const translationElements = document.querySelectorAll('[data-translation]');
             translationElements.forEach(element => {
                 const key = element.getAttribute('data-translation');
@@ -578,10 +579,52 @@ document.addEventListener('DOMContentLoaded', function() {
                     element.textContent = translations[key];
                 }
             });
+
+            // Handle data-translation-title attributes for tooltips
+            const titleElements = document.querySelectorAll('[data-translation-title]');
+            titleElements.forEach(element => {
+                const key = element.getAttribute('data-translation-title');
+                if (translations[key]) {
+                    element.setAttribute('title', translations[key]);
+                }
+            });
         }
 
-        // Initialize statistics notice translations
-        initializeStatisticsNotice();
+        // Initialize help panel functionality
+        function initializeHelpPanel() {
+            const helpButton = document.getElementById('help-btn');
+            const helpPanel = document.getElementById('help-panel');
+            const helpCloseButton = document.getElementById('help-close-btn');
+
+            if (helpButton && helpPanel) {
+                helpButton.addEventListener('click', function() {
+                    const isVisible = helpPanel.style.display !== 'none';
+                    helpPanel.style.display = isVisible ? 'none' : 'block';
+                });
+            }
+
+            if (helpCloseButton && helpPanel) {
+                helpCloseButton.addEventListener('click', function() {
+                    helpPanel.style.display = 'none';
+                });
+            }
+
+            // Close help panel when clicking outside
+            document.addEventListener('click', function(event) {
+                if (helpPanel && helpButton) {
+                    const isClickInsidePanel = helpPanel.contains(event.target);
+                    const isClickOnButton = helpButton.contains(event.target);
+
+                    if (!isClickInsidePanel && !isClickOnButton && helpPanel.style.display === 'block') {
+                        helpPanel.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Initialize all translations and help panel
+        initializeTranslations();
+        initializeHelpPanel();
 
         function drag(simulation) {
             function dragstarted(event) {

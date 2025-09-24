@@ -88,7 +88,22 @@ class BackendController extends ActionController
             'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow'),
             'statisticsNoData' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.noData'),
             'statisticsRunAnalysis' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.runAnalysis'),
-            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo')
+            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo'),
+            'helpButtonTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.button.title'),
+            'helpTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.title'),
+            'helpArrowsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.title'),
+            'helpArrowsDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.description'),
+            'helpColorsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.title'),
+            'helpColorsStandard' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.standard'),
+            'helpColorsSemantic' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.semantic'),
+            'helpColorsBroken' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.broken'),
+            'helpNodesTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.title'),
+            'helpNodesSize' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.size'),
+            'helpNodesColors' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.colors'),
+            'helpInteractionsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.title'),
+            'helpInteractionsDrag' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.drag'),
+            'helpInteractionsZoom' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.zoom'),
+            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover')
         ];
 
         $view->assignMultiple([
@@ -143,7 +158,22 @@ class BackendController extends ActionController
             'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow'),
             'statisticsNoData' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.noData'),
             'statisticsRunAnalysis' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.runAnalysis'),
-            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo')
+            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo'),
+            'helpButtonTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.button.title'),
+            'helpTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.title'),
+            'helpArrowsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.title'),
+            'helpArrowsDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.description'),
+            'helpColorsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.title'),
+            'helpColorsStandard' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.standard'),
+            'helpColorsSemantic' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.semantic'),
+            'helpColorsBroken' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.broken'),
+            'helpNodesTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.title'),
+            'helpNodesSize' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.size'),
+            'helpNodesColors' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.colors'),
+            'helpInteractionsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.title'),
+            'helpInteractionsDrag' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.drag'),
+            'helpInteractionsZoom' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.zoom'),
+            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover')
         ];
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);

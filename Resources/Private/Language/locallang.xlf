@@ -69,6 +69,51 @@
             <trans-unit id="statistics.notice.schedulerInfo">
                 <source>You can configure this task in the TYPO3 Scheduler for automatic updates.</source>
             </trans-unit>
+            <trans-unit id="help.button.title">
+                <source>Show diagram explanation</source>
+            </trans-unit>
+            <trans-unit id="help.title">
+                <source>Diagram Guide</source>
+            </trans-unit>
+            <trans-unit id="help.arrows.title">
+                <source>Arrow Directions</source>
+            </trans-unit>
+            <trans-unit id="help.arrows.description">
+                <source>Arrows point from source pages to target pages, showing the linking direction (Page A → Page B).</source>
+            </trans-unit>
+            <trans-unit id="help.colors.title">
+                <source>Link Colors</source>
+            </trans-unit>
+            <trans-unit id="help.colors.standard">
+                <source>Standard page links from content elements</source>
+            </trans-unit>
+            <trans-unit id="help.colors.semantic">
+                <source>AI-generated semantic suggestions based on content similarity</source>
+            </trans-unit>
+            <trans-unit id="help.colors.broken">
+                <source>Broken links where the target page no longer exists</source>
+            </trans-unit>
+            <trans-unit id="help.nodes.title">
+                <source>Node Information</source>
+            </trans-unit>
+            <trans-unit id="help.nodes.size">
+                <source>Node size reflects the number of incoming links to that page.</source>
+            </trans-unit>
+            <trans-unit id="help.nodes.colors">
+                <source>Node colors are based on dominant themes. Pages with similar content share similar colors.</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.title">
+                <source>Interactions</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.drag">
+                <source>Drag nodes to rearrange the diagram</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.zoom">
+                <source>Use mouse wheel to zoom, drag background to pan</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.hover">
+                <source>Hover over elements for detailed information</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>
