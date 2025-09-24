@@ -141,12 +141,96 @@
                         <core:icon identifier="actions-document-info" size="small" />
                         <span class="notices-count"></span>
                     </button>
+                    <button id="filters-btn" class="btn btn-default filters-button" title="Filter links" style="margin-right: 5px;">
+                        <core:icon identifier="actions-filter" />
+                    </button>
                     <button id="help-btn" class="btn btn-default help-button" title="{f:translate(key: 'help.button.title')}">
                         <core:icon identifier="actions-question" />
                     </button>
                     <button id="fit-to-window-btn" class="btn btn-default fit-to-window-button" style="margin-left: 5px;">
                         <core:icon identifier="actions-expand" /> <span class="btn-text" data-translation="fitToWindow"></span>
                     </button>
+                </div>
+
+                <!-- Filters Panel -->
+                <div id="filters-panel" class="filters-panel" style="display: none; position: absolute; top: 10px; left: 20px; z-index: 1000; background: rgba(40, 44, 52, 0.95); border: 1px solid #555; border-radius: 4px; padding: 15px; min-width: 250px; color: #00ff00; font-family: Arial; backdrop-filter: blur(5px);">
+                    <div class="filters-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: #00ff00;">Filter Options</h4>
+                        <button id="filters-close-btn" class="btn btn-sm btn-default">
+                            <core:icon identifier="actions-close" />
+                        </button>
+                    </div>
+                    <div class="filters-panel-content">
+                        <!-- Link Type Filters -->
+                        <div class="filter-section" style="margin-bottom: 15px;">
+                            <h5 style="color: #00ff00; margin-bottom: 10px;">Link Types:</h5>
+                            <div class="filter-checkboxes">
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-standard" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #999; margin-right: 5px; vertical-align: middle;"></span>
+                                    Standard Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-semantic" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #9c27b0; margin-right: 5px; vertical-align: middle;"></span>
+                                    Semantic Suggestions
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-broken" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #ff0000; margin-right: 5px; vertical-align: middle;"></span>
+                                    Broken Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-menu" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #00ffff; margin-right: 5px; vertical-align: middle;"></span>
+                                    Menu Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-html" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #ff00ff; margin-right: 5px; vertical-align: middle;"></span>
+                                    HTML Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-typolink" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #ffcc00; margin-right: 5px; vertical-align: middle;"></span>
+                                    TypoLinks
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="filter-section" style="margin-bottom: 10px;">
+                            <div style="display: flex; gap: 8px;">
+                                <button id="filter-select-all" class="btn btn-xs btn-default" style="flex: 1;">Select All</button>
+                                <button id="filter-deselect-all" class="btn btn-xs btn-default" style="flex: 1;">Deselect All</button>
+                            </div>
+                        </div>
+
+                        <!-- Depth Filter -->
+                        <div class="filter-section" style="margin-bottom: 15px;">
+                            <h5 style="color: #00ff00; margin-bottom: 10px;">Depth Limit:</h5>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label style="color: #00ff00;">Max Depth:</label>
+                                <input type="range" id="depth-slider" min="1" max="10" value="10" style="flex: 1;">
+                                <span id="depth-value" style="color: #00ff00; min-width: 30px;">∞</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <label style="display: block; cursor: pointer; color: #00ff00;">
+                                    <input type="checkbox" id="depth-from-root" style="margin-right: 8px;">
+                                    Calculate from site root
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Nodes Filter -->
+                        <div class="filter-section">
+                            <h5 style="color: #00ff00; margin-bottom: 10px;">Node Options:</h5>
+                            <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="filter-orphaned-nodes" checked style="margin-right: 8px;">
+                                Show Orphaned Nodes
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Help Panel -->

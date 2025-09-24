@@ -457,8 +457,19 @@ document.addEventListener('DOMContentLoaded', function() {
             // Éléments de la légende
             linkTypes.forEach((linkType, i) => {
             const legendItem = linkLegend.append("g")
-                .attr("transform", `translate(0, ${i * 25})`);
-                
+                .attr("transform", `translate(0, ${i * 25})`)
+                .attr("class", "legend-item")
+                .style("cursor", "pointer");
+
+            // Background for click area
+            legendItem.append("rect")
+                .attr("x", -5)
+                .attr("y", -2)
+                .attr("width", 150)
+                .attr("height", 20)
+                .attr("fill", "transparent")
+                .attr("stroke", "none");
+
             // Ligne représentant le lien
             legendItem.append("line")
                 .attr("x1", 0)
@@ -468,12 +479,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr("stroke", linkType.color)
                 .attr("stroke-width", 2)
                 .attr("stroke-dasharray", linkType.dash);
-                
+
             legendItem.append("text")
                 .attr("x", 30)
                 .attr("y", 15)
                 .attr("fill", "#00ff00")
                 .text(linkType.label);
+
+            // Add interactivity
+            legendItem.on("click", function(event, d) {
+                const filterMap = {
+                    'standard': 'filter-standard',
+                    'semantic': 'filter-semantic',
+                    'broken': 'filter-broken'
+                };
+
+                const checkboxId = filterMap[linkType.type];
+                if (checkboxId) {
+                    const checkbox = document.getElementById(checkboxId);
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                }
+            })
+            .on("mouseover", function() {
+                legendItem.select("rect").attr("fill", "rgba(0, 255, 0, 0.1)");
+                legendItem.select("text").attr("fill", "#ffffff");
+            })
+            .on("mouseout", function() {
+                legendItem.select("rect").attr("fill", "transparent");
+                legendItem.select("text").attr("fill", "#00ff00");
+            });
             });
             
         // Mettre à jour la fonction tick pour utiliser les bonnes références
@@ -762,9 +799,237 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Initialize all translations, help panel, and dismissible alerts
+        // Initialize filters panel functionality
+        function initializeFiltersPanel() {
+            const filtersButton = document.getElementById('filters-btn');
+            const filtersPanel = document.getElementById('filters-panel');
+            const filtersCloseButton = document.getElementById('filters-close-btn');
+            const selectAllButton = document.getElementById('filter-select-all');
+            const deselectAllButton = document.getElementById('filter-deselect-all');
+
+            // Filter state tracking
+            const filterState = {
+                standard: true,
+                semantic: true,
+                broken: true,
+                menu: true,
+                html: true,
+                typolink: true,
+                orphanedNodes: true,
+                maxDepth: 10,
+                depthFromRoot: false
+            };
+
+            if (filtersButton && filtersPanel) {
+                filtersButton.addEventListener('click', function() {
+                    const isVisible = filtersPanel.style.display !== 'none';
+                    filtersPanel.style.display = isVisible ? 'none' : 'block';
+                });
+            }
+
+            if (filtersCloseButton && filtersPanel) {
+                filtersCloseButton.addEventListener('click', function() {
+                    filtersPanel.style.display = 'none';
+                });
+            }
+
+            // Close filters panel when clicking outside
+            document.addEventListener('click', function(event) {
+                if (filtersPanel && filtersButton) {
+                    const isClickInsidePanel = filtersPanel.contains(event.target);
+                    const isClickOnButton = filtersButton.contains(event.target);
+
+                    if (!isClickInsidePanel && !isClickOnButton && filtersPanel.style.display === 'block') {
+                        filtersPanel.style.display = 'none';
+                    }
+                }
+            });
+
+            // Select all button
+            if (selectAllButton) {
+                selectAllButton.addEventListener('click', function() {
+                    Object.keys(filterState).forEach(key => {
+                        filterState[key] = true;
+                        const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                    applyFilters();
+                });
+            }
+
+            // Deselect all button
+            if (deselectAllButton) {
+                deselectAllButton.addEventListener('click', function() {
+                    Object.keys(filterState).forEach(key => {
+                        filterState[key] = false;
+                        const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
+                        if (checkbox) checkbox.checked = false;
+                    });
+                    applyFilters();
+                });
+            }
+
+            // Individual filter checkboxes
+            Object.keys(filterState).forEach(key => {
+                if (key === 'maxDepth' || key === 'depthFromRoot') return; // Handle these separately
+                const checkboxId = `filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+                const checkbox = document.getElementById(checkboxId);
+                if (checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        filterState[key] = this.checked;
+                        applyFilters();
+                    });
+                }
+            });
+
+            // Depth slider control
+            const depthSlider = document.getElementById('depth-slider');
+            const depthValue = document.getElementById('depth-value');
+            const depthFromRootCheckbox = document.getElementById('depth-from-root');
+
+            if (depthSlider && depthValue) {
+                depthSlider.addEventListener('input', function() {
+                    filterState.maxDepth = parseInt(this.value);
+                    depthValue.textContent = filterState.maxDepth === 10 ? '∞' : filterState.maxDepth.toString();
+                    applyFilters();
+                });
+            }
+
+            if (depthFromRootCheckbox) {
+                depthFromRootCheckbox.addEventListener('change', function() {
+                    filterState.depthFromRoot = this.checked;
+                    applyFilters();
+                });
+            }
+
+            // Function to determine if a link should be visible based on filters
+            function shouldShowLink(linkData) {
+                // Handle broken links
+                if (linkData.broken) {
+                    return filterState.broken;
+                }
+
+                // Handle semantic suggestions
+                if (linkData.contentElement?.type === 'semantic_suggestion') {
+                    return filterState.semantic;
+                }
+
+                // Handle specific link types based on content element type
+                const linkType = linkData.contentElement?.type;
+
+                if (linkType && (linkType.includes('menu') || linkType === 'menu_sitemap_pages')) {
+                    return filterState.menu;
+                }
+
+                if (linkType === 'html') {
+                    return filterState.html;
+                }
+
+                if (linkType === 'typolink') {
+                    return filterState.typolink;
+                }
+
+                // Default to standard links
+                return filterState.standard;
+            }
+
+            // Function to calculate node depths from a root node
+            function calculateNodeDepths(rootNodeId = null) {
+                const depths = {};
+                const visited = new Set();
+
+                // If no root specified, find the root node (assuming it's the one with lowest ID or specific properties)
+                let actualRootId = rootNodeId;
+                if (!actualRootId) {
+                    // Find root node - could be the homepage (ID 1) or the node with the most incoming links
+                    const rootCandidate = diagramData.nodes.find(node => node.id === '1') ||
+                                        diagramData.nodes.reduce((prev, current) =>
+                                            prev.incomingLinks > current.incomingLinks ? prev : current
+                                        );
+                    actualRootId = rootCandidate.id;
+                }
+
+                function dfs(nodeId, depth) {
+                    if (visited.has(nodeId) || depth > filterState.maxDepth) return;
+
+                    visited.add(nodeId);
+                    depths[nodeId] = depth;
+
+                    // Find all connected nodes
+                    validLinks.forEach(link => {
+                        const sourceId = link.source.id || link.source;
+                        const targetId = link.target.id || link.target;
+
+                        if (sourceId === nodeId && !visited.has(targetId)) {
+                            dfs(targetId, depth + 1);
+                        }
+                    });
+                }
+
+                dfs(actualRootId, 0);
+                return depths;
+            }
+
+            // Function to determine if a node should be visible
+            function shouldShowNode(nodeData, visibleLinks, nodeDepths = {}) {
+                // Check depth filtering
+                if (filterState.maxDepth < 10) {
+                    const nodeDepth = nodeDepths[nodeData.id];
+                    if (nodeDepth === undefined || nodeDepth > filterState.maxDepth) {
+                        return false;
+                    }
+                }
+
+                // If orphaned nodes filter is off, only show nodes with connections
+                if (!filterState.orphanedNodes) {
+                    const hasConnection = visibleLinks.some(link =>
+                        (link.source.id || link.source) === nodeData.id ||
+                        (link.target.id || link.target) === nodeData.id
+                    );
+                    return hasConnection;
+                }
+                return true;
+            }
+
+            // Apply filters function
+            function applyFilters() {
+                // Calculate node depths if depth filtering is enabled
+                let nodeDepths = {};
+                if (filterState.maxDepth < 10) {
+                    nodeDepths = calculateNodeDepths(filterState.depthFromRoot ? '1' : null);
+                }
+
+                // Filter links
+                const filteredLinks = validLinks.filter(shouldShowLink);
+
+                // Filter nodes based on link visibility, depth, and orphaned nodes setting
+                const filteredNodes = diagramData.nodes.filter(node =>
+                    shouldShowNode(node, filteredLinks, nodeDepths)
+                );
+
+                // Update link visualization
+                const linkSelection = g.selectAll('.links line')
+                    .style('display', d => shouldShowLink(d) ? 'block' : 'none');
+
+                // Update node visibility based on connections and filter settings
+                const nodeSelection = g.selectAll('.node')
+                    .style('display', d => shouldShowNode(d, filteredLinks, nodeDepths) ? 'block' : 'none');
+
+                // Update simulation with filtered data for physics calculations
+                simulation.force("link").links(filteredLinks);
+                simulation.alpha(0.3).restart();
+
+                console.log(`Filtered: ${filteredLinks.length} links, ${filteredNodes.length} nodes visible`);
+            }
+
+            // Expose applyFilters for external use
+            window.applyLinkFilters = applyFilters;
+        }
+
+        // Initialize all translations, help panel, filters panel, and dismissible alerts
         initializeTranslations();
         initializeHelpPanel();
+        initializeFiltersPanel();
         initializeDismissibleAlerts();
 
         function drag(simulation) {
