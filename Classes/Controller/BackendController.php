@@ -48,6 +48,9 @@ class BackendController extends ActionController
     // Pour TYPO3 v12 - Interface PSR-7 ServerRequestInterface
     public function mainActionV12(ServerRequestInterface $request): ResponseInterface
     {
+        // Ajouter CSS
+        $this->pageRenderer->addCssFile('EXT:page_link_insights/Resources/Public/Css/styles.css');
+
         // Ajouter JS
         $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/Vendor/d3.min.js');
         $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/force-diagram.js');
@@ -128,6 +131,9 @@ class BackendController extends ActionController
 
     protected function renderForV13(): ResponseInterface
     {
+        // Ajouter CSS
+        $this->pageRenderer->addCssFile('EXT:page_link_insights/Resources/Public/Css/styles.css');
+
         // Ajouter JS
         $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/Vendor/d3.min.js');
         $this->pageRenderer->addJsFile('EXT:page_link_insights/Resources/Public/JavaScript/force-diagram.js');
