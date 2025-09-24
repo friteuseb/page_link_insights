@@ -1,6 +1,6 @@
 <?php
 
-$EM_CONF['page_link_insights'] = [
+$EM_CONF[$_EXTKEY] = [
     'title' => 'Page Link Insights',
     'description' => 'Visualize internal page links with D3.js force diagrams and thematic clustering for content analysis.',
     'category' => 'module',
