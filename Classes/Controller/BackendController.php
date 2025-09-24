@@ -85,7 +85,10 @@ class BackendController extends ActionController
             'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
             'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
             'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove'),
-            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow')
+            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow'),
+            'statisticsNoData' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.noData'),
+            'statisticsRunAnalysis' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.runAnalysis'),
+            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo')
         ];
 
         $view->assignMultiple([
@@ -137,7 +140,10 @@ class BackendController extends ActionController
             'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
             'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
             'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove'),
-            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow')
+            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow'),
+            'statisticsNoData' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.noData'),
+            'statisticsRunAnalysis' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.runAnalysis'),
+            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo')
         ];
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
@@ -195,6 +201,7 @@ class BackendController extends ActionController
         // Si nous avons des statistiques, les renvoyer, sinon retourner des valeurs par défaut
         if ($statistics) {
             return [
+                'hasStatistics' => true,
                 'site' => [
                     'siteRoot' => $statistics['site_root'],
                     'totalPages' => $statistics['total_pages'],
@@ -208,7 +215,9 @@ class BackendController extends ActionController
             ];
         }
 
+        // No statistics available - indicate this to template
         return [
+            'hasStatistics' => false,
             'site' => [
                 'siteRoot' => 0,
                 'totalPages' => 0,

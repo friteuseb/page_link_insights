@@ -60,6 +60,15 @@
             <trans-unit id="diagram.button.fitToWindow">
                 <source>Fit to Window</source>
             </trans-unit>
+            <trans-unit id="statistics.notice.noData">
+                <source>No statistics available yet</source>
+            </trans-unit>
+            <trans-unit id="statistics.notice.runAnalysis">
+                <source>Run the 'Analyze Internal Links' task to generate statistics for your site.</source>
+            </trans-unit>
+            <trans-unit id="statistics.notice.schedulerInfo">
+                <source>You can configure this task in the TYPO3 Scheduler for automatic updates.</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

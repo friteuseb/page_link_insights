@@ -569,6 +569,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize the fit button
         initializeFitButton();
 
+        // Initialize statistics notice translations
+        function initializeStatisticsNotice() {
+            const translationElements = document.querySelectorAll('[data-translation]');
+            translationElements.forEach(element => {
+                const key = element.getAttribute('data-translation');
+                if (translations[key]) {
+                    element.textContent = translations[key];
+                }
+            });
+        }
+
+        // Initialize statistics notice translations
+        initializeStatisticsNotice();
+
         function drag(simulation) {
             function dragstarted(event) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
