@@ -1,3 +1,4 @@
+{namespace core = TYPO3\CMS\Core\ViewHelpers}
 <f:layout name="Default" />
 
 <f:section name="content">
@@ -35,10 +36,7 @@
                 <div class="alert alert-info" style="font-size: 12px; margin-bottom: 10px;">
                     <div class="media">
                         <div class="media-left">
-                            <span class="fa-stack fa-lg">
-                                <i class="fa fa-circle fa-stack-2x text-info"></i>
-                                <i class="fa fa-info fa-stack-1x fa-inverse"></i>
-                            </span>
+                            <core:icon identifier="actions-document-info" size="large" />
                         </div>
                         <div class="media-body">
                             Note: This analysis only includes links from content elements in column position(s): <strong>{colPosToAnalyze}</strong>
@@ -51,10 +49,7 @@
                 <div class="alert alert-info">
                     <div class="media">
                         <div class="media-left">
-                            <span class="fa-stack fa-lg">
-                                <i class="fa fa-circle fa-stack-2x text-info"></i>
-                                <i class="fa fa-info fa-stack-1x fa-inverse"></i>
-                            </span>
+                            <core:icon identifier="actions-document-info" size="large" />
                         </div>
                         <div class="media-body">
                             <f:translate key="module.semanticEnabled">Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram.</f:translate>
@@ -67,10 +62,7 @@
                 <div class="alert alert-warning">
                     <div class="media">
                         <div class="media-left">
-                            <span class="fa-stack fa-lg">
-                                <i class="fa fa-circle fa-stack-2x text-warning"></i>
-                                <i class="fa fa-exclamation fa-stack-1x fa-inverse"></i>
-                            </span>
+                            <core:icon identifier="status-dialog-warning" size="large" />
                         </div>
                         <div class="media-body">
                             <f:translate key="module.semanticDisabled">Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</f:translate>
@@ -119,10 +111,7 @@
                         <div class="alert alert-info statistics-notice" style="margin-bottom: 15px;">
                             <div class="media">
                                 <div class="media-left">
-                                    <span class="fa-stack fa-lg">
-                                        <i class="fa fa-circle fa-stack-2x text-info"></i>
-                                        <i class="fa fa-bar-chart fa-stack-1x fa-inverse"></i>
-                                    </span>
+                                    <core:icon identifier="actions-document-synchronize" size="large" />
                                 </div>
                                 <div class="media-body">
                                     <strong><span data-translation="statisticsNoData"></span></strong><br>
@@ -139,11 +128,11 @@
             <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e; position: relative;">
                 <!-- Control Buttons -->
                 <div class="diagram-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
-                    <button id="help-btn" class="btn btn-default help-button" title="" data-translation-title="helpButtonTitle">
-                        <i class="fa fa-question-circle"></i>
+                    <button id="help-btn" class="btn btn-default help-button" title="{f:translate(key: 'help.button.title')}">
+                        <core:icon identifier="actions-question" />
                     </button>
                     <button id="fit-to-window-btn" class="btn btn-default fit-to-window-button" style="margin-left: 5px;">
-                        <i class="fa fa-expand"></i> <span class="btn-text" data-translation="fitToWindow"></span>
+                        <core:icon identifier="actions-expand" /> <span class="btn-text" data-translation="fitToWindow"></span>
                     </button>
                 </div>
 
@@ -152,7 +141,7 @@
                     <div class="help-panel-header">
                         <h4><span data-translation="helpTitle"></span></h4>
                         <button id="help-close-btn" class="btn btn-sm btn-default">
-                            <i class="fa fa-times"></i>
+                            <core:icon identifier="actions-close" />
                         </button>
                     </div>
                     <div class="help-panel-content">

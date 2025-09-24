@@ -580,14 +580,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Handle data-translation-title attributes for tooltips
-            const titleElements = document.querySelectorAll('[data-translation-title]');
-            titleElements.forEach(element => {
-                const key = element.getAttribute('data-translation-title');
-                if (translations[key]) {
-                    element.setAttribute('title', translations[key]);
-                }
-            });
         }
 
         // Initialize help panel functionality
