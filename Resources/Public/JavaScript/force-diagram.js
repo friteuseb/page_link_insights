@@ -582,6 +582,154 @@ document.addEventListener('DOMContentLoaded', function() {
 
         }
 
+        // Initialize dismissible alerts
+        function initializeDismissibleAlerts() {
+            // Get all dismissible alerts
+            const dismissibleAlerts = document.querySelectorAll('.dismissible-alert');
+            const dismissedAlertsKey = 'page_link_insights_dismissed_alerts';
+
+            // Get dismissed alerts from localStorage
+            let dismissedAlerts = [];
+            try {
+                const stored = localStorage.getItem(dismissedAlertsKey);
+                dismissedAlerts = stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                console.warn('Could not parse dismissed alerts from localStorage:', e);
+            }
+
+            // Hide already dismissed alerts
+            dismissedAlerts.forEach(alertId => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    alert.style.display = 'none';
+                }
+            });
+
+
+            // Initialize the show notices button
+            updateNoticesButton();
+
+            function updateNoticesButton() {
+                const showNoticesBtn = document.getElementById('show-notices-btn');
+                const noticesCount = document.querySelector('.notices-count');
+
+                if (!showNoticesBtn || !noticesCount) return;
+
+                if (dismissedAlerts.length > 0) {
+                    showNoticesBtn.style.display = 'flex';
+                    noticesCount.textContent = dismissedAlerts.length;
+
+                    // Remove existing listeners to avoid duplicates
+                    showNoticesBtn.replaceWith(showNoticesBtn.cloneNode(true));
+                    const newShowNoticesBtn = document.getElementById('show-notices-btn');
+
+                    newShowNoticesBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // Restore all dismissed alerts with animation
+                        dismissedAlerts.forEach((alertId, index) => {
+                            const alert = document.getElementById(alertId);
+                            if (alert) {
+                                // Stagger the animations
+                                setTimeout(() => {
+                                    alert.style.display = 'block';
+                                    alert.classList.remove('fade-out');
+                                    // Add fade-in animation
+                                    alert.style.opacity = '0';
+                                    alert.style.transform = 'translateY(-10px)';
+
+                                    setTimeout(() => {
+                                        alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                        alert.style.opacity = '1';
+                                        alert.style.transform = 'translateY(0)';
+                                    }, 50);
+                                }, index * 100);
+                            }
+                        });
+
+                        // Clear localStorage and hide button
+                        try {
+                            localStorage.removeItem(dismissedAlertsKey);
+                        } catch (e) {
+                            console.warn('Could not clear dismissed alerts from localStorage:', e);
+                        }
+
+                        dismissedAlerts.length = 0; // Clear the array
+                        newShowNoticesBtn.style.display = 'none';
+
+                        // Show temporary success message
+                        const restoredMessage = translations.noticesRestoredMessage || 'Notices restored';
+                        showTemporaryMessage(restoredMessage);
+                    });
+                } else {
+                    showNoticesBtn.style.display = 'none';
+                }
+            }
+
+            function showTemporaryMessage(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.textContent = message;
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 60px;
+                    right: 20px;
+                    background-color: #28a745;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 10000;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                `;
+
+                document.body.appendChild(messageDiv);
+
+                // Fade in
+                setTimeout(() => messageDiv.style.opacity = '1', 50);
+
+                // Fade out and remove
+                setTimeout(() => {
+                    messageDiv.style.opacity = '0';
+                    setTimeout(() => messageDiv.remove(), 300);
+                }, 2000);
+            }
+
+            // Update the dismiss functionality to refresh the notices button
+            dismissibleAlerts.forEach(alert => {
+                const dismissBtn = alert.querySelector('.alert-dismiss-btn');
+                if (dismissBtn) {
+                    dismissBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const alertId = alert.id;
+
+                        // Animate dismissal
+                        alert.classList.add('fade-out');
+
+                        // After animation completes, hide element and update localStorage
+                        setTimeout(() => {
+                            alert.style.display = 'none';
+
+                            // Save to localStorage
+                            if (alertId && !dismissedAlerts.includes(alertId)) {
+                                dismissedAlerts.push(alertId);
+                                try {
+                                    localStorage.setItem(dismissedAlertsKey, JSON.stringify(dismissedAlerts));
+                                } catch (e) {
+                                    console.warn('Could not save dismissed alerts to localStorage:', e);
+                                }
+                                // Update the notices button
+                                updateNoticesButton();
+                            }
+                        }, 300); // Match CSS transition duration
+                    });
+                }
+            });
+        }
+
         // Initialize help panel functionality
         function initializeHelpPanel() {
             const helpButton = document.getElementById('help-btn');
@@ -614,9 +762,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Initialize all translations and help panel
+        // Initialize all translations, help panel, and dismissible alerts
         initializeTranslations();
         initializeHelpPanel();
+        initializeDismissibleAlerts();
 
         function drag(simulation) {
             function dragstarted(event) {

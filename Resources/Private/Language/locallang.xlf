@@ -114,6 +114,30 @@
             <trans-unit id="help.interactions.hover">
                 <source>Hover over elements for detailed information</source>
             </trans-unit>
+            <trans-unit id="help.interactions.ctrlclick">
+                <source>Ctrl+Click on nodes to open pages in TYPO3 backend</source>
+            </trans-unit>
+            <trans-unit id="help.overview.title">
+                <source>Overview</source>
+            </trans-unit>
+            <trans-unit id="help.overview.description">
+                <source>This diagram visualizes the relationships between pages on your site. Each circle represents a page, and arrows show linking connections.</source>
+            </trans-unit>
+            <trans-unit id="help.links.title">
+                <source>Link Types</source>
+            </trans-unit>
+            <trans-unit id="alerts.dismiss.title">
+                <source>Dismiss this notice</source>
+            </trans-unit>
+            <trans-unit id="alerts.show.dismissed">
+                <source>Show dismissed notices</source>
+            </trans-unit>
+            <trans-unit id="notices.show.title">
+                <source>Show dismissed notices</source>
+            </trans-unit>
+            <trans-unit id="notices.restored.message">
+                <source>Notices restored</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

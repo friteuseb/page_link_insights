@@ -33,7 +33,10 @@
             
             <!-- Information sur les colPos analysées -->
             <f:if condition="{colPosToAnalyze}">
-                <div class="alert alert-info" style="font-size: 12px; margin-bottom: 10px;">
+                <div class="alert alert-info dismissible-alert" id="colpos-info-alert" style="font-size: 12px; margin-bottom: 10px;">
+                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title')}">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
                     <div class="media">
                         <div class="media-left">
                             <core:icon identifier="actions-document-info" size="large" />
@@ -46,7 +49,10 @@
             </f:if>
                 
             <f:if condition="{semanticSuggestionInstalled}">
-                <div class="alert alert-info">
+                <div class="alert alert-info dismissible-alert" id="semantic-enabled-alert">
+                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title')}">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
                     <div class="media">
                         <div class="media-left">
                             <core:icon identifier="actions-document-info" size="large" />
@@ -59,7 +65,10 @@
             </f:if>
             
             <f:if condition="{semanticSuggestionInstalled} == 0">
-                <div class="alert alert-warning">
+                <div class="alert alert-warning dismissible-alert" id="semantic-disabled-alert">
+                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title')}">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
                     <div class="media">
                         <div class="media-left">
                             <core:icon identifier="status-dialog-warning" size="large" />
@@ -128,6 +137,10 @@
             <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e; position: relative;">
                 <!-- Control Buttons -->
                 <div class="diagram-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+                    <button id="show-notices-btn" class="btn btn-default notices-button" style="display: none; margin-right: 5px;" title="{f:translate(key: 'notices.show.title')}">
+                        <core:icon identifier="actions-document-info" size="small" />
+                        <span class="notices-count"></span>
+                    </button>
                     <button id="help-btn" class="btn btn-default help-button" title="{f:translate(key: 'help.button.title')}">
                         <core:icon identifier="actions-question" />
                     </button>
@@ -145,54 +158,82 @@
                         </button>
                     </div>
                     <div class="help-panel-content">
-                        <!-- Arrow Directions Section -->
+                        <!-- Overview Section -->
                         <div class="help-section">
-                            <h5><span data-translation="helpArrowsTitle"></span></h5>
-                            <p><span data-translation="helpArrowsDescription"></span></p>
-                            <div class="help-example">
-                                <svg width="120" height="30">
-                                    <defs>
-                                        <marker id="help-arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
-                                            <path d="M0,-5L10,0L0,5" fill="#999"/>
-                                        </marker>
-                                    </defs>
-                                    <line x1="10" y1="15" x2="100" y2="15" stroke="#999" stroke-width="2" marker-end="url(#help-arrow)"/>
-                                    <text x="55" y="10" text-anchor="middle" fill="#00ff00" font-size="10">Source → Target</text>
-                                </svg>
-                            </div>
-                        </div>
-
-                        <!-- Link Colors Section -->
-                        <div class="help-section">
-                            <h5><span data-translation="helpColorsTitle"></span></h5>
-                            <div class="help-color-item">
-                                <span class="help-color-swatch" style="background-color: #999;"></span>
-                                <span data-translation="helpColorsStandard"></span>
-                            </div>
-                            <div class="help-color-item">
-                                <span class="help-color-swatch" style="background-color: #9c27b0;"></span>
-                                <span data-translation="helpColorsSemantic"></span>
-                            </div>
-                            <div class="help-color-item">
-                                <span class="help-color-swatch" style="background-color: #ff0000;"></span>
-                                <span data-translation="helpColorsBroken"></span>
-                            </div>
+                            <h5><span data-translation="helpOverviewTitle"></span></h5>
+                            <p><span data-translation="helpOverviewDescription"></span></p>
                         </div>
 
                         <!-- Node Information Section -->
                         <div class="help-section">
                             <h5><span data-translation="helpNodesTitle"></span></h5>
                             <p><span data-translation="helpNodesSize"></span></p>
+                            <div class="help-nodes-example">
+                                <div class="help-node-item">
+                                    <div class="help-node-circle help-node-small">1-2</div>
+                                    <div class="help-node-label">Small<br>Few links</div>
+                                </div>
+                                <div class="help-node-item">
+                                    <div class="help-node-circle help-node-medium">3-5</div>
+                                    <div class="help-node-label">Medium<br>Some links</div>
+                                </div>
+                                <div class="help-node-item">
+                                    <div class="help-node-circle help-node-large">6+</div>
+                                    <div class="help-node-label">Large<br>Many links</div>
+                                </div>
+                            </div>
                             <p><span data-translation="helpNodesColors"></span></p>
+                        </div>
+
+                        <!-- Link Colors Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpLinksTitle"></span></h5>
+                            <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #999;"></span>
+                                <strong><span data-translation="helpColorsStandard"></span></strong>
+                            </div>
+                            <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #9c27b0;"></span>
+                                <strong><span data-translation="helpColorsSemantic"></span></strong>
+                            </div>
+                            <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #ff0000;"></span>
+                                <strong><span data-translation="helpColorsBroken"></span></strong>
+                            </div>
+                        </div>
+
+                        <!-- Arrow Directions Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpArrowsTitle"></span></h5>
+                            <p><span data-translation="helpArrowsDescription"></span></p>
+                            <div class="help-example">
+                                <svg width="180" height="50" viewBox="0 0 180 50">
+                                    <defs>
+                                        <marker id="help-arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+                                            <path d="M0,-5L10,0L0,5" fill="#999"/>
+                                        </marker>
+                                    </defs>
+                                    <!-- Source node -->
+                                    <circle cx="25" cy="25" r="15" fill="#4a9eff" stroke="#00ff00" stroke-width="2"/>
+                                    <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">Home</text>
+                                    <!-- Arrow -->
+                                    <line x1="45" y1="25" x2="135" y2="25" stroke="#999" stroke-width="3" marker-end="url(#help-arrow)"/>
+                                    <text x="90" y="18" text-anchor="middle" fill="#00ff00" font-size="10">Link direction</text>
+                                    <!-- Target node -->
+                                    <circle cx="155" cy="25" r="15" fill="#ff6b35" stroke="#00ff00" stroke-width="2"/>
+                                    <text x="155" y="30" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">About</text>
+                                </svg>
+                            </div>
                         </div>
 
                         <!-- Interactions Section -->
                         <div class="help-section">
                             <h5><span data-translation="helpInteractionsTitle"></span></h5>
                             <ul>
-                                <li><span data-translation="helpInteractionsDrag"></span></li>
-                                <li><span data-translation="helpInteractionsZoom"></span></li>
-                                <li><span data-translation="helpInteractionsHover"></span></li>
+                                <li><strong>🖱️ <span data-translation="helpInteractionsDrag"></span></strong></li>
+                                <li><strong>🔍 <span data-translation="helpInteractionsZoom"></span></strong></li>
+                                <li><strong>ℹ️ <span data-translation="helpInteractionsHover"></span></strong></li>
+                                <li><strong>🔗 <span data-translation="helpInteractionsCtrlClick"></span></strong></li>
                             </ul>
                         </div>
                     </div>

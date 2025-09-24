@@ -102,7 +102,13 @@ class BackendController extends ActionController
             'helpInteractionsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.title'),
             'helpInteractionsDrag' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.drag'),
             'helpInteractionsZoom' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.zoom'),
-            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover')
+            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover'),
+            'helpInteractionsCtrlClick' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.ctrlclick'),
+            'helpOverviewTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.title'),
+            'helpOverviewDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.description'),
+            'helpLinksTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.links.title'),
+            'noticesShowTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.show.title'),
+            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message')
         ];
 
         $view->assignMultiple([
@@ -171,7 +177,13 @@ class BackendController extends ActionController
             'helpInteractionsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.title'),
             'helpInteractionsDrag' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.drag'),
             'helpInteractionsZoom' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.zoom'),
-            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover')
+            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover'),
+            'helpInteractionsCtrlClick' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.ctrlclick'),
+            'helpOverviewTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.title'),
+            'helpOverviewDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.description'),
+            'helpLinksTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.links.title'),
+            'noticesShowTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.show.title'),
+            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message')
         ];
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
