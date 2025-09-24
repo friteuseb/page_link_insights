@@ -19,6 +19,7 @@ class PageLinkService
     private bool $includeHidden;
     private bool $includeShortcuts;
     private bool $includeExternalLinks;
+    private bool $includeSemanticSuggestions;
 
     public function __construct()
     {
@@ -33,6 +34,7 @@ class PageLinkService
         $this->includeHidden = (bool)($this->extensionConfiguration['includeHidden'] ?? false);
         $this->includeShortcuts = (bool)($this->extensionConfiguration['includeShortcuts'] ?? false);
         $this->includeExternalLinks = (bool)($this->extensionConfiguration['includeExternalLinks'] ?? false);
+        $this->includeSemanticSuggestions = (bool)($this->extensionConfiguration['includeSemanticSuggestions'] ?? true);
     }
 
     private function getExcludedDokTypes(): array
@@ -119,7 +121,7 @@ class PageLinkService
     {
         $links = [];
         
-        if (empty($pageUids) || !$this->isSemanticSuggestionInstalled()) {
+        if (empty($pageUids) || !$this->shouldIncludeSemanticSuggestions()) {
             return $links;
         }
 
@@ -164,9 +166,13 @@ class PageLinkService
         return $links;
     }
 
-    private function isSemanticSuggestionInstalled(): bool
+    /**
+     * Check if semantic suggestions should be included based on both extension availability and configuration
+     */
+    public function shouldIncludeSemanticSuggestions(): bool
     {
-        return \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
+        return \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion')
+            && $this->includeSemanticSuggestions;
     }
 
     private function getMenuSitemapPages(array $pageUids): array
@@ -387,7 +393,7 @@ private function getPageTreeInfo(int $rootPageId): array
         }
 
             // Add semantic suggestion links
-            if ($this->isSemanticSuggestionInstalled()) {
+            if ($this->shouldIncludeSemanticSuggestions()) {
                 $semanticLinks = $this->getSemanticSuggestionLinks($pageUids);
                 $links = array_merge($links, $semanticLinks);
             }

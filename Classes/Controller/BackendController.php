@@ -71,8 +71,8 @@ class BackendController extends ActionController
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
         
-        // Check if the semanticSuggestion extension is installed
-        $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
+        // Check if semantic suggestions should be included (both extension availability and configuration)
+        $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
         
         // Prepare translations for JavaScript
         $translations = [
@@ -146,8 +146,8 @@ class BackendController extends ActionController
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
         
-        // Check if the semanticSuggestion extension is installed
-        $semanticSuggestionInstalled = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion');
+        // Check if semantic suggestions should be included (both extension availability and configuration)
+        $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
 
         // Prepare translations for JavaScript
         $translations = [
