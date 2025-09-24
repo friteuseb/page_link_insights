@@ -346,9 +346,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Ajouter une légende pour les thèmes si des thèmes sont présents
         if (uniqueThemes.length > 0) {
+            // Responsive positioning for themes legend
+            const legendWidth = 180; // Estimated legend width
+            const padding = 20; // Minimum padding from edge
+            let legendX = Math.max(padding, width - legendWidth - padding);
+
+            // On smaller screens, position vertically
+            if (width < 768) {
+                legendX = padding;
+            }
+
             const legend = svg.append("g")
-                .attr("class", "legend")
-                .attr("transform", `translate(${width - 200}, 30)`);
+                .attr("class", "legend themes-legend")
+                .attr("transform", `translate(${legendX}, 30)`);
 
             // Titre de la légende
             legend.append("text")
@@ -376,9 +386,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Ajouter une légende pour les types de liens
+            // Responsive positioning for link types legend
+            let linkLegendY = 30;
+
+            // On smaller screens, position link legend below theme legend if it exists
+            if (width < 768 && uniqueThemes.length > 0) {
+                const themeItemsHeight = uniqueThemes.length * 25;
+                linkLegendY = 60 + themeItemsHeight; // Below theme legend with some spacing
+            }
+
             const linkLegend = svg.append("g")
             .attr("class", "link-legend")
-            .attr("transform", `translate(20, 30)`); // Positionné en haut à gauche
+            .attr("transform", `translate(20, ${linkLegendY})`);
 
             // Titre de la légende
             linkLegend.append("text")
@@ -436,6 +455,43 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     
         svg.call(zoom);
+
+        // Add window resize handler for responsive legends
+        function updateLegendsPosition() {
+            const currentWidth = container.clientWidth;
+
+            // Update themes legend position
+            const themesLegend = svg.select('.themes-legend');
+            if (!themesLegend.empty()) {
+                const legendWidth = 180;
+                const padding = 20;
+                let legendX = Math.max(padding, currentWidth - legendWidth - padding);
+
+                if (currentWidth < 768) {
+                    legendX = padding;
+                }
+
+                themesLegend.attr("transform", `translate(${legendX}, 30)`);
+            }
+
+            // Update link legend position
+            const linkLegend = svg.select('.link-legend');
+            if (!linkLegend.empty()) {
+                let linkLegendY = 30;
+
+                if (currentWidth < 768 && uniqueThemes.length > 0) {
+                    const themeItemsHeight = uniqueThemes.length * 25;
+                    linkLegendY = 60 + themeItemsHeight;
+                }
+
+                linkLegend.attr("transform", `translate(20, ${linkLegendY})`);
+            }
+        }
+
+        // Listen for window resize events
+        window.addEventListener('resize', () => {
+            updateLegendsPosition();
+        });
 
         function drag(simulation) {
             function dragstarted(event) {

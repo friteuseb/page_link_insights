@@ -46,3 +46,34 @@
     background-color: #2d2d2d; /* Subtle background */
     border-radius: 8px;
 }
+
+/* Responsive styles for diagram legends */
+.legend text,
+.link-legend text {
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+}
+
+/* Media queries for better legend visibility */
+@media (max-width: 768px) {
+    .legend text,
+    .link-legend text {
+        font-size: 11px; /* Slightly smaller text on mobile */
+    }
+
+    #force-diagram-container {
+        height: calc(100vh - 100px) !important; /* More space for legends on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .legend text,
+    .link-legend text {
+        font-size: 10px; /* Even smaller on very small screens */
+    }
+
+    /* Ensure legends don't overlap with diagram content */
+    #force-diagram-container {
+        height: calc(100vh - 120px) !important;
+    }
+}
