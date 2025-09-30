@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .join("marker")
             .attr("id", d => d)
             .attr("viewBox", "0 -5 10 10")
-            .attr("refX", d => nodeScale(d3.max(diagramData.nodes, d => d.incomingLinks)) + 10)
+            .attr("refX", () => nodeScale(Math.max(0, d3.max(diagramData.nodes, d => d.incomingLinks) || 0)) + 10)
             .attr("refY", 0)
             .attr("markerWidth", 6)
             .attr("markerHeight", 6)
