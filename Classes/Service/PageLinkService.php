@@ -125,50 +125,90 @@ class PageLinkService
     private function getSemanticSuggestionLinks(array $pageUids): array
     {
         $links = [];
-        
+
         if (empty($pageUids) || !$this->shouldIncludeSemanticSuggestions()) {
             return $links;
         }
 
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_semanticsuggestion_similarities');
-        $queryBuilder->getRestrictions()
-            ->removeAll()
-            ->add(new DeletedRestriction());
-        
-        $similarities = $queryBuilder
-            ->select('page_id', 'similar_page_id', 'similarity_score')
-            ->from('tx_semanticsuggestion_similarities')
-            ->where(
-                $queryBuilder->expr()->in(
-                    'page_id',
-                    $queryBuilder->createNamedParameter($pageUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
-                ),
-                // Use the similarity threshold defined in Semantic Suggestion if possible
-                $queryBuilder->expr()->gt(
-                    'similarity_score',
-                    $queryBuilder->createNamedParameter(0.3, ParameterType::STRING) // Using Doctrine ParameterType (correct)
+        // Get semantic_suggestion settings (threshold and maxSuggestions)
+        $semanticSettings = $this->getSemanticSuggestionSettings();
+        $threshold = $semanticSettings['qualityLevel'];
+        $maxSuggestionsPerPage = $semanticSettings['maxSuggestions'];
+
+        // Get suggestions for each page, respecting the limit per page (like frontend display)
+        foreach ($pageUids as $pageUid) {
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_semanticsuggestion_similarities');
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(new DeletedRestriction());
+
+            $similarities = $queryBuilder
+                ->select('page_id', 'similar_page_id', 'similarity_score')
+                ->from('tx_semanticsuggestion_similarities')
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'page_id',
+                        $queryBuilder->createNamedParameter($pageUid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
+                    ),
+                    $queryBuilder->expr()->gte(
+                        'similarity_score',
+                        $queryBuilder->createNamedParameter($threshold, ParameterType::STRING)
                     )
-            )
-            ->orderBy('similarity_score', 'DESC')
-            ->executeQuery()
-            ->fetchAllAssociative();
-        
-        foreach ($similarities as $similarity) {
-            $links[] = [
-                'sourcePageId' => (string)$similarity['page_id'],
-                'targetPageId' => (string)$similarity['similar_page_id'],
-                'contentElement' => [
-                    'uid' => 0, // No specific content element
-                    'type' => 'semantic_suggestion',
-                    'header' => 'Semantic Suggestion',
-                    'colPos' => -1 // Special value to indicate it's a suggestion
-                ],
-                'similarity' => $similarity['similarity_score'],
-                'isSemantic' => true
-            ];
+                )
+                ->orderBy('similarity_score', 'DESC')
+                ->setMaxResults($maxSuggestionsPerPage)
+                ->executeQuery()
+                ->fetchAllAssociative();
+
+            foreach ($similarities as $similarity) {
+                $links[] = [
+                    'sourcePageId' => (string)$similarity['page_id'],
+                    'targetPageId' => (string)$similarity['similar_page_id'],
+                    'contentElement' => [
+                        'uid' => 0,
+                        'type' => 'semantic_suggestion',
+                        'header' => 'Semantic Suggestion',
+                        'colPos' => -1
+                    ],
+                    'similarity' => $similarity['similarity_score'],
+                    'isSemantic' => true
+                ];
+            }
         }
-        
+
         return $links;
+    }
+
+    /**
+     * Get settings from semantic_suggestion TypoScript configuration
+     */
+    private function getSemanticSuggestionSettings(): array
+    {
+        // Default values matching semantic_suggestion defaults
+        $defaults = [
+            'qualityLevel' => 0.3,
+            'maxSuggestions' => 3,
+        ];
+
+        try {
+            $configurationManager = GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Configuration\ConfigurationManager::class);
+            $settings = $configurationManager->getConfiguration(
+                \TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS,
+                'SemanticSuggestion',
+                'Suggestions'
+            );
+
+            if (!empty($settings)) {
+                return [
+                    'qualityLevel' => (float)($settings['qualityLevel'] ?? $settings['proximityThreshold'] ?? $defaults['qualityLevel']),
+                    'maxSuggestions' => (int)($settings['maxSuggestions'] ?? $defaults['maxSuggestions']),
+                ];
+            }
+        } catch (\Exception $e) {
+            // Fall back to defaults if TypoScript is not available
+        }
+
+        return $defaults;
     }
 
     /**
