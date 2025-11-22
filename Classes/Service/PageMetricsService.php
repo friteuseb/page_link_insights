@@ -16,17 +16,104 @@ class PageMetricsService {
     }
 
     public function analyzeSite(int $rootPageId): void {
+        // Clean old data before inserting new analysis results
+        $this->cleanOldAnalysisData($rootPageId);
+
         // Retrieve link data via the existing service
         $networkData = $this->pageLinkService->getPageLinksForSubtree($rootPageId);
-        
+
         // Calculate metrics
         $pageMetrics = $this->calculatePageMetrics($networkData);
         $globalStats = $this->calculateGlobalStats($networkData);
-        
+
         // Save the data
         $this->persistPageMetrics($pageMetrics);
         $this->persistLinkData($networkData['links']);
         $this->persistGlobalStats($globalStats, $rootPageId);
+    }
+
+    /**
+     * Clean old analysis data before inserting new results
+     * This prevents data accumulation when running multiple cron tasks
+     */
+    private function cleanOldAnalysisData(int $rootPageId): void
+    {
+        // Get all page IDs in the subtree to clean their specific metrics
+        $pageIds = $this->getSubtreePageIds($rootPageId);
+
+        if (empty($pageIds)) {
+            return;
+        }
+
+        // Clean page analysis data for pages in this subtree
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_pageanalysis');
+        $queryBuilder
+            ->delete('tx_pagelinkinsights_pageanalysis')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'page_uid',
+                    $queryBuilder->createNamedParameter($pageIds, Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->executeStatement();
+
+        // Clean link analysis data for links originating from pages in this subtree
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_linkanalysis');
+        $queryBuilder
+            ->delete('tx_pagelinkinsights_linkanalysis')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'source_page',
+                    $queryBuilder->createNamedParameter($pageIds, Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->executeStatement();
+
+        // Clean statistics for this specific site root
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_statistics');
+        $queryBuilder
+            ->delete('tx_pagelinkinsights_statistics')
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'site_root',
+                    $queryBuilder->createNamedParameter($rootPageId, Connection::PARAM_INT)
+                )
+            )
+            ->executeStatement();
+    }
+
+    /**
+     * Get all page IDs in a subtree
+     */
+    private function getSubtreePageIds(int $rootPageId): array
+    {
+        $allPageIds = [$rootPageId];
+        $pagesToProcess = [$rootPageId];
+
+        while (!empty($pagesToProcess)) {
+            $currentPageIds = $pagesToProcess;
+            $pagesToProcess = [];
+
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+            $childPages = $queryBuilder
+                ->select('uid')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->in(
+                        'pid',
+                        $queryBuilder->createNamedParameter($currentPageIds, Connection::PARAM_INT_ARRAY)
+                    )
+                )
+                ->executeQuery()
+                ->fetchAllAssociative();
+
+            foreach ($childPages as $page) {
+                $allPageIds[] = $page['uid'];
+                $pagesToProcess[] = $page['uid'];
+            }
+        }
+
+        return $allPageIds;
     }
     
     private function calculatePageMetrics(array $networkData): array {

@@ -319,7 +319,10 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         try {
             // Retrieve all pages in the subtree
             $pageIds = $this->getSubtreePageIds($pageUid);
-            
+
+            // Clean old theme data for this subtree before inserting new data
+            $this->cleanThemeDataForPages($pageIds);
+
             // Récupérer le contenu des pages
             $pageContents = $this->getPageContents($pageIds);
             
@@ -672,5 +675,58 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
      * Debug mode to enable detailed logs
      */
     protected bool $debugMode = false;
+
+    /**
+     * Clean theme data for specific pages before inserting new analysis results
+     * This prevents data accumulation when running multiple cron tasks
+     */
+    private function cleanThemeDataForPages(array $pageIds): void
+    {
+        if (empty($pageIds)) {
+            return;
+        }
+
+        // Clean keywords for these pages
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_keywords');
+        $queryBuilder
+            ->delete('tx_pagelinkinsights_keywords')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'page_uid',
+                    $queryBuilder->createNamedParameter($pageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->executeStatement();
+
+        // Clean page-theme associations for these pages
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_page_themes');
+        $queryBuilder
+            ->delete('tx_pagelinkinsights_page_themes')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'page_uid',
+                    $queryBuilder->createNamedParameter($pageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->executeStatement();
+
+        // Get theme UIDs that are only associated with these pages (orphaned themes)
+        // and delete them to avoid accumulating unused themes
+        $this->cleanOrphanedThemes();
+    }
+
+    /**
+     * Remove themes that have no page associations
+     */
+    private function cleanOrphanedThemes(): void
+    {
+        // Delete themes that have no page associations
+        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_themes');
+        $connection->executeStatement(
+            'DELETE t FROM tx_pagelinkinsights_themes t
+             LEFT JOIN tx_pagelinkinsights_page_themes pt ON t.uid = pt.theme_uid
+             WHERE pt.uid IS NULL'
+        );
+    }
 
 }
