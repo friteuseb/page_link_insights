@@ -29,3 +29,4 @@ desktop.ini
 
 # Ignorer les fichiers générés par DDEV
 .ddev
+.claude-flow/
