@@ -86,22 +86,27 @@ class PageLinkService
         $referencedPageIds = array_unique($referencedPageIds);
         
         // Get additional page information for referenced pages
-        $missingPageIds = array_diff($referencedPageIds, $pageUids);
+        // Convert pageUids to strings for proper comparison (referencedPageIds are strings)
+        $pageUidsAsStrings = array_map('strval', $pageUids);
+        $missingPageIds = array_diff($referencedPageIds, $pageUidsAsStrings);
         if (!empty($missingPageIds)) {
             $additionalPages = $this->getAdditionalPagesInfo($missingPageIds);
             $pages = array_merge($pages, $additionalPages);
         }
-    
-        // Mark broken links
-        $pageIds = array_column($pages, 'uid');
-        $allLinks = array_map(function($link) use ($pageIds) {
-            $link['broken'] = !in_array($link['sourcePageId'], $pageIds) || !in_array($link['targetPageId'], $pageIds);
+
+        // Deduplicate pages by UID
+        $pages = $this->deduplicatePages($pages);
+
+        // Mark broken links (convert pageIds to strings for proper comparison)
+        $pageIdsAsStrings = array_map('strval', array_column($pages, 'uid'));
+        $allLinks = array_map(function($link) use ($pageIdsAsStrings) {
+            $link['broken'] = !in_array($link['sourcePageId'], $pageIdsAsStrings) || !in_array($link['targetPageId'], $pageIdsAsStrings);
             return $link;
         }, $allLinks);
-    
+
         // Add logging for broken links
-        $brokenLinks = array_filter($allLinks, function($link) use ($pageIds) {
-            return !in_array($link['sourcePageId'], $pageIds) || !in_array($link['targetPageId'], $pageIds);
+        $brokenLinks = array_filter($allLinks, function($link) {
+            return $link['broken'] ?? false;
         });
     
         if (!empty($brokenLinks)) {
@@ -341,10 +346,25 @@ private function getPageTreeInfo(int $rootPageId): array
             ->fetchAllAssociative();
     }
 
+    /**
+     * Fields that can contain page links in tt_content
+     * Only these fields will be analyzed for links to avoid false positives
+     */
+    private const LINK_FIELDS = [
+        'bodytext',
+        'header_link',
+        'pages',
+        'records',
+        'tx_gridelements_children',
+        'pi_flexform',
+        'image_link',
+        'media',
+    ];
+
     private function getContentElementLinks(array $pageUids): array
     {
         $links = [];
-        
+
         if (empty($pageUids)) {
             return $links;
         }
@@ -353,14 +373,14 @@ private function getPageTreeInfo(int $rootPageId): array
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction());
-            
+
         if (!$this->includeHidden) {
             $queryBuilder->getRestrictions()->add(new HiddenRestriction());
         }
 
-        // Retrieve all fields that can contain links
+        // Only retrieve fields that can actually contain links
         $contentElements = $queryBuilder
-            ->select('*')  // We retrieve all fields to miss nothing
+            ->select('uid', 'pid', 'CType', 'header', 'colPos', 'bodytext', 'header_link', 'pages', 'records', 'pi_flexform', 'image_link', 'media')
             ->from('tt_content')
             ->where(
                 $queryBuilder->expr()->in(
@@ -376,66 +396,106 @@ private function getPageTreeInfo(int $rootPageId): array
             ->fetchAllAssociative();
 
         foreach ($contentElements as $content) {
-            // Analyser chaque champ du contenu pour trouver des liens
-            foreach ($content as $fieldName => $fieldValue) {
-                if (is_string($fieldValue) && !empty($fieldValue)) {
-                    // Check links in the text
-                    $this->processTextLinks($fieldValue, $content, $links);
+            // Only analyze fields that can contain links
+            foreach (self::LINK_FIELDS as $fieldName) {
+                if (isset($content[$fieldName]) && is_string($content[$fieldName]) && !empty($content[$fieldName])) {
+                    $this->processTextLinks($content[$fieldName], $content, $links);
                 }
             }
 
             // Special processing for contents with referenced pages
-            if (str_starts_with($content['CType'], 'menu_') || 
-                !empty($content['pages']) || 
+            if (str_starts_with($content['CType'], 'menu_') ||
+                !empty($content['pages']) ||
                 str_contains($content['CType'], 'list')) {
                 $this->processMenuElement($content, $links);
             }
         }
 
-            // Add semantic suggestion links
-            if ($this->shouldIncludeSemanticSuggestions()) {
-                $semanticLinks = $this->getSemanticSuggestionLinks($pageUids);
-                $links = array_merge($links, $semanticLinks);
-            }
-
-            return $links;
+        // Add semantic suggestion links
+        if ($this->shouldIncludeSemanticSuggestions()) {
+            $semanticLinks = $this->getSemanticSuggestionLinks($pageUids);
+            $links = array_merge($links, $semanticLinks);
         }
+
+        // Deduplicate links based on source, target and content element
+        $links = $this->deduplicateLinks($links);
+
+        return $links;
+    }
+
+    /**
+     * Remove duplicate pages by UID
+     */
+    private function deduplicatePages(array $pages): array
+    {
+        $seen = [];
+        $uniquePages = [];
+
+        foreach ($pages as $page) {
+            $uid = (string)$page['uid'];
+            if (!isset($seen[$uid])) {
+                $seen[$uid] = true;
+                $uniquePages[] = $page;
+            }
+        }
+
+        return $uniquePages;
+    }
+
+    /**
+     * Remove duplicate links (same source, target and content element)
+     */
+    private function deduplicateLinks(array $links): array
+    {
+        $seen = [];
+        $uniqueLinks = [];
+
+        foreach ($links as $link) {
+            $key = $link['sourcePageId'] . '-' . $link['targetPageId'] . '-' . ($link['contentElement']['uid'] ?? 0);
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $uniqueLinks[] = $link;
+            }
+        }
+
+        return $uniqueLinks;
+    }
 
     private function processTextLinks(string $content, array $element, array &$links): void
     {
-        // t3://page links
+        // t3://page links (TYPO3 v8+)
         if (preg_match_all('/t3:\/\/page\?uid=(\d+)/', $content, $matches)) {
             foreach ($matches[1] as $pageUid) {
                 $this->addLink($element, (string)$pageUid, $links);
             }
         }
 
-        // <link> tags
-        if (preg_match_all('/<link (\d+)>/', $content, $matches)) {
+        // <link> tags (legacy RTE format)
+        if (preg_match_all('/<link\s+(\d+)[^>]*>/', $content, $matches)) {
             foreach ($matches[1] as $pageUid) {
                 $this->addLink($element, (string)$pageUid, $links);
             }
         }
-        
-        // Legacy typolinks
+
+        // Legacy typolinks format: page,123 or t3://page,123
         if (preg_match_all('/\b(?:t3:\/\/)?page,(\d+)(?:,|\s|$)/', $content, $matches)) {
             foreach ($matches[1] as $pageUid) {
                 $this->addLink($element, (string)$pageUid, $links);
             }
         }
-        
-        // record:pages:UID links
+
+        // record:pages:UID links (used in some extensions)
         if (preg_match_all('/record:pages:(\d+)/', $content, $matches)) {
             foreach ($matches[1] as $pageUid) {
                 $this->addLink($element, (string)$pageUid, $links);
             }
         }
-        
-        // Direct links to pages (used in some plugins)
-        if (preg_match_all('/(?:^|[^\d])(\d+)(?:[^\d]|$)/', $content, $matches)) {
-            foreach ($matches[1] as $potentialUid) {
-                if ($this->isValidPageUid((int)$potentialUid)) {
-                    $this->addLink($element, (string)$potentialUid, $links);
+
+        // TypoLink in href attributes: href="123" or href='123' (direct page UID)
+        if (preg_match_all('/href=["\'](\d+)["\']/', $content, $matches)) {
+            foreach ($matches[1] as $pageUid) {
+                if ($this->isValidPageUid((int)$pageUid)) {
+                    $this->addLink($element, (string)$pageUid, $links);
                 }
             }
         }
