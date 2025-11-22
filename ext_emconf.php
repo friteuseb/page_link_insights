@@ -8,7 +8,7 @@ $EM_CONF[$_EXTKEY] = [
     'clearCacheOnLoad' => true,
     'author' => 'Cyril Wolfangel',
     'author_email' => 'cyril.wolfangel@gmail.com',
-    'version' => '1.5.0',
+    'version' => '1.5.1',
     'uploadfolder' => false,
     'createDirs' => '',
     'autoload' => [],
@@ -16,9 +16,11 @@ $EM_CONF[$_EXTKEY] = [
     'CGLcompliance_note' => '',
     'constraints' => [
         'depends' => [
-            'typo3' => '>=12.4.0,<14.0.0',
-            'php' => '>=8.1.0,<8.5.0',
-            'nlp_tools' => '>=1.2.0',
+            'typo3' => '12.4.0-13.4.99',
+            'php' => '8.1.0-8.4.99',
+            'nlp_tools' => '1.2.0-1.99.99',
         ],
-  ],
+        'conflicts' => [],
+        'suggests' => [],
+    ],
 ];
