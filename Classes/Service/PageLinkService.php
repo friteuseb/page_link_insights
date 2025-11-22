@@ -378,9 +378,9 @@ private function getPageTreeInfo(int $rootPageId): array
             $queryBuilder->getRestrictions()->add(new HiddenRestriction());
         }
 
-        // Only retrieve fields that can actually contain links
+        // Retrieve all fields but only analyze specific ones for links
         $contentElements = $queryBuilder
-            ->select('uid', 'pid', 'CType', 'header', 'colPos', 'bodytext', 'header_link', 'pages', 'records', 'pi_flexform', 'image_link', 'media')
+            ->select('*')
             ->from('tt_content')
             ->where(
                 $queryBuilder->expr()->in(

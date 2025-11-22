@@ -159,7 +159,7 @@ class PageMetricsService {
         foreach ($nodes as $node) {
             $pageId = $node['id'];
             $pageMetrics[$pageId] = [
-                'page_uid' => $pageId,
+                'page_uid' => (int)$pageId,
                 'pagerank' => $pageRanks[$pageId] ?? 0.0,
                 'inbound_links' => $inboundLinks[$pageId] ?? 0,
                 'outbound_links' => $outboundLinks[$pageId] ?? 0,
@@ -174,7 +174,11 @@ class PageMetricsService {
     private function calculatePageRank(array $nodes, array $links, float $dampingFactor = 0.85, int $iterations = 20): array {
         $numNodes = count($nodes);
         $pageRank = [];
-        
+
+        if ($numNodes === 0) {
+            return $pageRank;
+        }
+
         // Initialisation
         foreach ($nodes as $node) {
             $pageRank[$node['id']] = 1 / $numNodes;
@@ -207,10 +211,15 @@ class PageMetricsService {
     }
     
     private function calculateCentrality(string $pageId, array $links): float {
+        $totalLinks = count($links);
+        if ($totalLinks === 0) {
+            return 0.0;
+        }
+
         $inDegree = count(array_filter($links, fn($link) => $link['targetPageId'] === $pageId));
         $outDegree = count(array_filter($links, fn($link) => $link['sourcePageId'] === $pageId));
-        
-        return ($inDegree + $outDegree) / (2 * count($links));
+
+        return ($inDegree + $outDegree) / (2 * $totalLinks);
     }
     
     private function calculateGlobalStats(array $networkData): array {
@@ -274,11 +283,11 @@ class PageMetricsService {
                     'pid' => 0,
                     'tstamp' => $currentTime,
                     'crdate' => $currentTime,
-                    'source_page' => $link['sourcePageId'],
-                    'target_page' => $link['targetPageId'],
-                    'content_element' => $link['contentElement']['uid'],
-                    'link_type' => $link['contentElement']['type'],
-                    'is_broken' => $link['broken'] ? 1 : 0,
+                    'source_page' => (int)$link['sourcePageId'],
+                    'target_page' => (int)$link['targetPageId'],
+                    'content_element' => (int)($link['contentElement']['uid'] ?? 0),
+                    'link_type' => $link['contentElement']['type'] ?? 'unknown',
+                    'is_broken' => ($link['broken'] ?? false) ? 1 : 0,
                     'weight' => 1.0
                 ]
             );

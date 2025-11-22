@@ -720,13 +720,34 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
      */
     private function cleanOrphanedThemes(): void
     {
-        // Delete themes that have no page associations
-        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_themes');
-        $connection->executeStatement(
-            'DELETE t FROM tx_pagelinkinsights_themes t
-             LEFT JOIN tx_pagelinkinsights_page_themes pt ON t.uid = pt.theme_uid
-             WHERE pt.uid IS NULL'
-        );
+        // Get all theme UIDs that are still associated with pages
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_page_themes');
+        $usedThemeUids = $queryBuilder
+            ->select('theme_uid')
+            ->from('tx_pagelinkinsights_page_themes')
+            ->groupBy('theme_uid')
+            ->executeQuery()
+            ->fetchFirstColumn();
+
+        // Delete themes that are not in the list of used themes
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_themes');
+        if (empty($usedThemeUids)) {
+            // No associations exist, delete all themes
+            $queryBuilder
+                ->delete('tx_pagelinkinsights_themes')
+                ->executeStatement();
+        } else {
+            // Delete only orphaned themes
+            $queryBuilder
+                ->delete('tx_pagelinkinsights_themes')
+                ->where(
+                    $queryBuilder->expr()->notIn(
+                        'uid',
+                        $queryBuilder->createNamedParameter($usedThemeUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                    )
+                )
+                ->executeStatement();
+        }
     }
 
 }
