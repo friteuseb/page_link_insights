@@ -10,12 +10,14 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 - **Interactive Force Diagram**: Visualize page relationships with D3.js
 - **Content-Based Analysis**: Focus on actual content links rather than navigation
 - **Link Type Detection**: Identify different types of page references (HTML, typolink, content elements)
+- **Fullscreen Mode**: Maximize graph visibility with one click (ESC to exit)
+- **Linkvalidator Integration**: Optional integration with TYPO3's cms-linkvalidator for accurate broken link detection
 
 ### Advanced Page Metrics
 - **PageRank Calculation**: See which pages carry the most authority
 - **Centrality Scores**: Identify key junction pages in your content
 - **Inbound/Outbound Links**: Track connection counts for each page
-- **Broken Link Detection**: Automatically identify and visualize broken references
+- **Broken Link Detection**: Automatically identify and visualize broken references (enhanced with linkvalidator data when available)
 
 ### Thematic Analysis
 - **Keyword Extraction**: Automatically identify significant terms on each page
@@ -41,9 +43,13 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 
 ## Requirements
 
-- TYPO3 13.0+
-- PHP 8.1+
+- TYPO3 12.4 - 13.4
+- PHP 8.1 - 8.4
 - NlpTools extension (for thematic analysis)
+
+### Optional
+- **cms-linkvalidator**: For enhanced broken link detection with actual HTTP validation
+- **semantic_suggestion**: For AI-powered semantic content relationships
 
 ## Installation
 
@@ -70,8 +76,22 @@ The extension can be configured through the Extension Configuration in TYPO3 Bac
 1. Go to Admin Tools > Settings > Extension Configuration
 2. Select "page_link_insights"
 3. Configure the following options:
-   - `colPosToAnalyze`: Comma-separated list of content column positions to analyze (default: 0)
-   - `includeHidden`: Whether to include hidden pages and content elements (default: false)
+
+### Basic Options
+| Option | Default | Description |
+|--------|---------|-------------|
+| `colPosToAnalyze` | `0,2` | Comma-separated list of content column positions to analyze |
+| `includeHidden` | `false` | Include hidden pages and content elements |
+| `includeSemanticSuggestions` | `true` | Show semantic suggestions in diagram (requires semantic_suggestion extension) |
+
+### Advanced Options
+| Option | Default | Description |
+|--------|---------|-------------|
+| `includeShortcuts` | `false` | Include shortcut pages (doktype 4) in diagrams |
+| `includeExternalLinks` | `false` | Include external link pages (doktype 3) in diagrams |
+| `useLinkvalidator` | `true` | Use TYPO3 linkvalidator for broken link detection (if available) |
+
+> **Note**: The `useLinkvalidator` option provides more accurate broken link detection when cms-linkvalidator is installed and its scheduler task has been run. If linkvalidator is not available, the extension falls back to checking if target pages exist in the database.
 
 ### Scheduler Task
 
@@ -101,11 +121,24 @@ To set up automatic link analysis:
 
 ### Interactive Features
 
-- **Zoom and Pan**: Navigate through complex diagrams
+- **Zoom and Pan**: Navigate through complex diagrams using mouse wheel and drag
 - **Drag Nodes**: Reposition elements for better visualization
-- **Ctrl+Click**: Open the page directly in TYPO3
+- **Ctrl+Click**: Open the page directly in TYPO3 backend
 - **Right-Click**: Remove node from visualization (temporary)
-- **Tooltips**: Show detailed page and link information
+- **Tooltips**: Show detailed page and link information on hover
+
+### Toolbar Buttons
+
+- **Filters**: Filter links by type (standard, semantic, broken, menu, HTML, typolink)
+- **Help**: Display diagram legend and interaction guide
+- **Fit to Window**: Auto-zoom to show all nodes
+- **Fullscreen**: Maximize graph area (press ESC to exit)
+
+### Compact Header
+
+The module header displays status badges that can be dismissed:
+- **colPos badge**: Shows which column positions are being analyzed
+- **Semantic badge**: Indicates if semantic suggestions are enabled/available
 
 ### Understanding Thematic Analysis
 
@@ -124,7 +157,19 @@ Pages with similar content will be grouped together and colored according to the
 - If this extension is not available or encounters errors, a fallback method is automatically used
 - In all cases, relevant themes will be generated for your pages
 
-The clustering visualization works in both TYPO3 v12 and v13, and is compatible with PHP 8.1 and 8.2.
+The clustering visualization works in both TYPO3 v12 and v13, and is compatible with PHP 8.1 to 8.4.
+
+### Linkvalidator Integration
+
+When `cms-linkvalidator` is installed and configured:
+
+1. Run the linkvalidator scheduler task to populate broken link data
+2. Page Link Insights will automatically use this data for more accurate broken link detection
+3. Broken links are marked with their source:
+   - `linkvalidator`: Detected by TYPO3's linkvalidator (HTTP validated)
+   - `page_not_found`: Target page doesn't exist in database (fallback method)
+
+To disable linkvalidator integration, set `useLinkvalidator = 0` in extension configuration.
 
 ### Solr Integration
 
@@ -136,6 +181,8 @@ For search functionality enhancement, see [README_SOLR.md](README_SOLR.md).
 - **Missing Links**: Check if links are in the analyzed column positions
 - **Performance Issues**: Large sites may need higher PHP memory limits
 - **Theme Analysis Errors**: Verify NlpTools extension is installed
+- **Linkvalidator Not Working**: Ensure cms-linkvalidator scheduler task has been run at least once
+- **Semantic Suggestions Missing**: Install and configure the semantic_suggestion extension
 
 ## Support and Contribution
 
