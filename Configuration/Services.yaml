@@ -20,6 +20,8 @@ services:
     
   Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
+    arguments:
+      $linkvalidatorService: '@Cywolf\PageLinkInsights\Service\LinkvalidatorService'
 
   Cywolf\PageLinkInsights\Service\PageMetricsService:
     public: true
@@ -34,6 +36,9 @@ services:
         description: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.description'
   
   Cywolf\PageLinkInsights\Service\ThemeDataService:
+    public: true
+
+  Cywolf\PageLinkInsights\Service\LinkvalidatorService:
     public: true
 
   Cywolf\PageLinkInsights\Event\PageMetricsEventListener:

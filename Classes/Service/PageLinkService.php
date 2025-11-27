@@ -20,21 +20,25 @@ class PageLinkService
     private bool $includeShortcuts;
     private bool $includeExternalLinks;
     private bool $includeSemanticSuggestions;
+    private bool $useLinkvalidator;
+    private ?LinkvalidatorService $linkvalidatorService = null;
 
-    public function __construct()
+    public function __construct(?LinkvalidatorService $linkvalidatorService = null)
     {
         $this->connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
-        
+        $this->linkvalidatorService = $linkvalidatorService;
+
         // Retrieve the extension configuration
         $this->extensionConfiguration = GeneralUtility::makeInstance(ExtensionConfiguration::class)
             ->get('page_link_insights');
-            
+
         // Convertir les colPos en tableau d'entiers
         $this->allowedColPos = GeneralUtility::intExplode(',', $this->extensionConfiguration['colPosToAnalyze'] ?? '0', true);
         $this->includeHidden = (bool)($this->extensionConfiguration['includeHidden'] ?? false);
         $this->includeShortcuts = (bool)($this->extensionConfiguration['includeShortcuts'] ?? false);
         $this->includeExternalLinks = (bool)($this->extensionConfiguration['includeExternalLinks'] ?? false);
         $this->includeSemanticSuggestions = (bool)($this->extensionConfiguration['includeSemanticSuggestions'] ?? true);
+        $this->useLinkvalidator = (bool)($this->extensionConfiguration['useLinkvalidator'] ?? true);
     }
 
     private function getExcludedDokTypes(): array
@@ -55,6 +59,47 @@ class PageLinkService
         }
 
         return $excludedDokTypes;
+    }
+
+    /**
+     * Get broken links from linkvalidator if available and enabled
+     *
+     * @param array $pageUids List of page UIDs to check
+     * @return array Broken links indexed by source page ID
+     */
+    private function getLinkvalidatorBrokenLinks(array $pageUids): array
+    {
+        if (!$this->useLinkvalidator || $this->linkvalidatorService === null) {
+            return [];
+        }
+
+        if (!$this->linkvalidatorService->isAvailable()) {
+            return [];
+        }
+
+        return $this->linkvalidatorService->getBrokenLinksForPages($pageUids);
+    }
+
+    /**
+     * Check if linkvalidator integration is active
+     */
+    public function isLinkvalidatorActive(): bool
+    {
+        return $this->useLinkvalidator
+            && $this->linkvalidatorService !== null
+            && $this->linkvalidatorService->isAvailable();
+    }
+
+    /**
+     * Get linkvalidator statistics if available
+     */
+    public function getLinkvalidatorStatistics(array $pageUids = []): array
+    {
+        if (!$this->isLinkvalidatorActive()) {
+            return ['available' => false];
+        }
+
+        return $this->linkvalidatorService->getStatistics($pageUids);
     }
 
     public function getPageLinksForSubtree(int $pageUid): array
@@ -97,10 +142,32 @@ class PageLinkService
         // Deduplicate pages by UID
         $pages = $this->deduplicatePages($pages);
 
-        // Mark broken links (convert pageIds to strings for proper comparison)
+        // Mark broken links using linkvalidator if available, otherwise fallback to simple check
         $pageIdsAsStrings = array_map('strval', array_column($pages, 'uid'));
-        $allLinks = array_map(function($link) use ($pageIdsAsStrings) {
+        $linkvalidatorBrokenLinks = $this->getLinkvalidatorBrokenLinks($pageUids);
+
+        $allLinks = array_map(function($link) use ($pageIdsAsStrings, $linkvalidatorBrokenLinks) {
+            $sourceId = (int)$link['sourcePageId'];
+            $targetId = (int)$link['targetPageId'];
+
+            // First check linkvalidator data if available
+            if (!empty($linkvalidatorBrokenLinks)) {
+                if (isset($linkvalidatorBrokenLinks[$sourceId])) {
+                    foreach ($linkvalidatorBrokenLinks[$sourceId] as $brokenLink) {
+                        if ((int)$brokenLink['targetPageId'] === $targetId) {
+                            $link['broken'] = true;
+                            $link['brokenSource'] = 'linkvalidator';
+                            return $link;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: check if pages exist in our tree
             $link['broken'] = !in_array($link['sourcePageId'], $pageIdsAsStrings) || !in_array($link['targetPageId'], $pageIdsAsStrings);
+            if ($link['broken']) {
+                $link['brokenSource'] = 'page_not_found';
+            }
             return $link;
         }, $allLinks);
 
