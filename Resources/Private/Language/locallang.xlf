@@ -138,6 +138,15 @@
             <trans-unit id="notices.restored.message">
                 <source>Notices restored</source>
             </trans-unit>
+            <trans-unit id="fullscreen.button.title">
+                <source>Toggle fullscreen mode</source>
+            </trans-unit>
+            <trans-unit id="diagram.button.fullscreen">
+                <source>Fullscreen</source>
+            </trans-unit>
+            <trans-unit id="diagram.button.exitFullscreen">
+                <source>Exit Fullscreen</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

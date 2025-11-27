@@ -2,7 +2,7 @@
 .module {
     background-color: #1e1e1e; /* Fond sombre */
     color: #ffffff; /* Texte blanc */
-    margin: 15px; /* Add outer margin for proper spacing */
+    margin: 5px; /* Reduced margin for more graph space */
     border-radius: 8px;
 }
 
@@ -17,8 +17,8 @@
 .module-body {
     background-color: #1e1e1e; /* Fond sombre pour le corps */
     color: #ffffff; /* Texte blanc */
-    padding: 20px; /* Increased padding for better spacing */
-    margin: 15px; /* Add margin to prevent "broken" appearance */
+    padding: 8px; /* Reduced padding for more graph space */
+    margin: 5px; /* Reduced margin for more graph space */
     border-radius: 8px; /* Subtle rounded corners for modern look */
 }
 
@@ -41,8 +41,8 @@
 
 /* Style pour l'en-tête du module */
 .module-header {
-    margin: 15px; /* Add consistent spacing */
-    padding: 15px;
+    margin: 5px; /* Reduced margin for more graph space */
+    padding: 10px; /* Reduced padding for more graph space */
     background-color: #2d2d2d; /* Subtle background */
     border-radius: 8px;
 }
@@ -440,4 +440,75 @@
 /* Legacy support for old show-dismissed-btn */
 .show-dismissed-btn {
     display: none;
+}
+
+/* Fullscreen Button Styles */
+.fullscreen-button {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.fullscreen-button:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+.fullscreen-button:active {
+    background-color: #1d1d1d;
+}
+
+.fullscreen-button.active {
+    background-color: #00aa00;
+    border-color: #00ff00;
+}
+
+.fullscreen-button.active:hover {
+    background-color: #00cc00;
+}
+
+/* Fullscreen Mode Styles */
+body.fullscreen-mode .module-header,
+body.fullscreen-mode .panel.panel-default,
+body.fullscreen-mode .statistics-notice {
+    display: none !important;
+}
+
+body.fullscreen-mode .module {
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+body.fullscreen-mode .module-body {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+body.fullscreen-mode #force-diagram-container {
+    height: 100vh !important;
+    border-radius: 0 !important;
+}
+
+body.fullscreen-mode .diagram-controls {
+    top: 15px !important;
+    right: 15px !important;
+}
+
+/* Responsive fullscreen button */
+@media (max-width: 768px) {
+    .fullscreen-button {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+
+    .fullscreen-button .btn-text {
+        display: none;
+    }
 }

@@ -606,6 +606,71 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize the fit button
         initializeFitButton();
 
+        // Initialize fullscreen mode button
+        function initializeFullscreenButton() {
+            const fullscreenButton = document.getElementById('fullscreen-btn');
+            const buttonText = fullscreenButton?.querySelector('.btn-text');
+
+            if (!fullscreenButton) return;
+
+            // Update button text based on translations
+            function updateButtonText(isFullscreen) {
+                if (buttonText) {
+                    buttonText.textContent = isFullscreen
+                        ? (translations.exitFullscreen || 'Exit Fullscreen')
+                        : (translations.fullscreen || 'Fullscreen');
+                }
+            }
+
+            // Toggle fullscreen mode
+            function toggleFullscreen() {
+                const isFullscreen = document.body.classList.toggle('fullscreen-mode');
+                fullscreenButton.classList.toggle('active', isFullscreen);
+                updateButtonText(isFullscreen);
+
+                // Update SVG viewBox after transition
+                setTimeout(() => {
+                    const newWidth = container.clientWidth;
+                    const newHeight = container.clientHeight;
+                    svg.attr("viewBox", [0, 0, newWidth, newHeight]);
+
+                    // Re-center the simulation
+                    simulation.force("center", d3.forceCenter(newWidth / 2, newHeight / 2));
+                    simulation.alpha(0.3).restart();
+                }, 100);
+
+                // Store preference in localStorage
+                try {
+                    localStorage.setItem('page_link_insights_fullscreen', isFullscreen ? 'true' : 'false');
+                } catch (e) {
+                    console.warn('Could not save fullscreen preference:', e);
+                }
+            }
+
+            // Handle button click
+            fullscreenButton.addEventListener('click', toggleFullscreen);
+
+            // Handle Escape key to exit fullscreen
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && document.body.classList.contains('fullscreen-mode')) {
+                    toggleFullscreen();
+                }
+            });
+
+            // Restore fullscreen preference from localStorage
+            try {
+                const savedPreference = localStorage.getItem('page_link_insights_fullscreen');
+                if (savedPreference === 'true') {
+                    toggleFullscreen();
+                }
+            } catch (e) {
+                console.warn('Could not restore fullscreen preference:', e);
+            }
+        }
+
+        // Initialize the fullscreen button
+        initializeFullscreenButton();
+
         // Initialize translations for all elements
         function initializeTranslations() {
             // Handle data-translation attributes

@@ -111,7 +111,9 @@ class BackendController extends ActionController
             'helpOverviewDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.description'),
             'helpLinksTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.links.title'),
             'noticesShowTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.show.title'),
-            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message')
+            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message'),
+            'fullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fullscreen'),
+            'exitFullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.exitFullscreen')
         ];
 
         $view->assignMultiple([
@@ -189,7 +191,9 @@ class BackendController extends ActionController
             'helpOverviewDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.description'),
             'helpLinksTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.links.title'),
             'noticesShowTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.show.title'),
-            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message')
+            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message'),
+            'fullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fullscreen'),
+            'exitFullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.exitFullscreen')
         ];
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);

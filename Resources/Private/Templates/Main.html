@@ -10,7 +10,7 @@
             }
             
             #force-diagram-container {
-                height: calc(100vh - 60px) !important;
+                height: calc(100vh - 40px) !important;
             }
             
             .module-body {
@@ -133,7 +133,7 @@
             </f:if>
 
             <!-- Force Diagram -->
-            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e; position: relative;">
+            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 50px); background-color: #1e1e1e; position: relative;">
                 <!-- Control Buttons -->
                 <div class="diagram-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
                     <button id="show-notices-btn" class="btn btn-default notices-button" style="display: none; margin-right: 5px;" title="{f:translate(key: 'notices.show.title', extensionName: 'page_link_insights')}">
@@ -148,6 +148,9 @@
                     </button>
                     <button id="fit-to-window-btn" class="btn btn-default fit-to-window-button" style="margin-left: 5px;">
                         <core:icon identifier="actions-expand" /> <span class="btn-text" data-translation="fitToWindow"></span>
+                    </button>
+                    <button id="fullscreen-btn" class="btn btn-default fullscreen-button" style="margin-left: 5px;" title="{f:translate(key: 'fullscreen.button.title', extensionName: 'page_link_insights')}">
+                        <core:icon identifier="actions-fullscreen" /> <span class="btn-text" data-translation="fullscreen"></span>
                     </button>
                 </div>
 
