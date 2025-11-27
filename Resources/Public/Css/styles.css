@@ -47,6 +47,105 @@
     border-radius: 8px;
 }
 
+/* Compact header styles */
+.compact-header {
+    padding: 8px 15px !important;
+    margin: 5px !important;
+}
+
+.compact-header .header-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.compact-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.compact-header .header-alerts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Badge styles for compact alerts */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: default;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.dismissible-badge {
+    position: relative;
+}
+
+.dismissible-badge .badge-dismiss-btn {
+    display: none;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 4px;
+    cursor: pointer;
+    opacity: 0.7;
+    color: inherit;
+}
+
+.dismissible-badge:hover .badge-dismiss-btn {
+    display: inline-flex;
+}
+
+.dismissible-badge .badge-dismiss-btn:hover {
+    opacity: 1;
+}
+
+/* Hide dismissed badges */
+.dismissible-badge.dismissed {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .compact-header .header-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .compact-header h1 {
+        font-size: 16px;
+    }
+
+    .badge {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
+}
+
 /* Responsive styles for diagram legends */
 .legend text,
 .link-legend text {

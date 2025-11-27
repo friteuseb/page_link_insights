@@ -684,10 +684,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         }
 
-        // Initialize dismissible alerts
+        // Initialize dismissible alerts and badges
         function initializeDismissibleAlerts() {
-            // Get all dismissible alerts
+            // Get all dismissible elements (alerts and badges)
             const dismissibleAlerts = document.querySelectorAll('.dismissible-alert');
+            const dismissibleBadges = document.querySelectorAll('.dismissible-badge');
             const dismissedAlertsKey = 'page_link_insights_dismissed_alerts';
 
             // Get dismissed alerts from localStorage
@@ -699,11 +700,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.warn('Could not parse dismissed alerts from localStorage:', e);
             }
 
-            // Hide already dismissed alerts
+            // Hide already dismissed alerts and badges
             dismissedAlerts.forEach(alertId => {
-                const alert = document.getElementById(alertId);
-                if (alert) {
-                    alert.style.display = 'none';
+                const element = document.getElementById(alertId);
+                if (element) {
+                    element.style.display = 'none';
+                    element.classList.add('dismissed');
+                }
+            });
+
+            // Initialize badge dismiss buttons
+            dismissibleBadges.forEach(badge => {
+                const dismissBtn = badge.querySelector('.badge-dismiss-btn');
+                if (dismissBtn) {
+                    dismissBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const badgeId = badge.id;
+                        badge.classList.add('dismissed');
+                        badge.style.display = 'none';
+
+                        if (badgeId && !dismissedAlerts.includes(badgeId)) {
+                            dismissedAlerts.push(badgeId);
+                            try {
+                                localStorage.setItem(dismissedAlertsKey, JSON.stringify(dismissedAlerts));
+                            } catch (e) {
+                                console.warn('Could not save dismissed badge to localStorage:', e);
+                            }
+                            updateNoticesButton();
+                        }
+                    });
                 }
             });
 
@@ -729,24 +756,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         e.preventDefault();
                         e.stopPropagation();
 
-                        // Restore all dismissed alerts with animation
+                        // Restore all dismissed alerts and badges
                         dismissedAlerts.forEach((alertId, index) => {
-                            const alert = document.getElementById(alertId);
-                            if (alert) {
-                                // Stagger the animations
-                                setTimeout(() => {
-                                    alert.style.display = 'block';
-                                    alert.classList.remove('fade-out');
-                                    // Add fade-in animation
-                                    alert.style.opacity = '0';
-                                    alert.style.transform = 'translateY(-10px)';
-
+                            const element = document.getElementById(alertId);
+                            if (element) {
+                                element.classList.remove('dismissed', 'fade-out');
+                                // Check if it's a badge or alert
+                                if (element.classList.contains('badge')) {
+                                    element.style.display = 'inline-flex';
+                                } else {
+                                    element.style.display = 'block';
+                                    element.style.opacity = '0';
+                                    element.style.transform = 'translateY(-10px)';
                                     setTimeout(() => {
-                                        alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                                        alert.style.opacity = '1';
-                                        alert.style.transform = 'translateY(0)';
+                                        element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                        element.style.opacity = '1';
+                                        element.style.transform = 'translateY(0)';
                                     }, 50);
-                                }, index * 100);
+                                }
                             }
                         });
 

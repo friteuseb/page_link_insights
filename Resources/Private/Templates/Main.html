@@ -18,66 +18,32 @@
             }
         </style>
 
-        <div class="module-header">
-            <h1>
-                <f:translate key="module.title" extensionName="page_link_insights">Page Link Insights</f:translate>
-                <small>
-                    <f:translate key="module.subtitle" extensionName="page_link_insights">Interactive visualization of page relationships</f:translate>
-                </small>
-            </h1>
-            
-            <p class="lead">
-                <f:translate key="module.description" extensionName="page_link_insights">Explore how your pages connect through content links and references.</f:translate>
-            </p>
-            
-            <!-- Information sur les colPos analysées -->
-            <f:if condition="{colPosToAnalyze}">
-                <div class="alert alert-info dismissible-alert" id="colpos-info-alert" style="font-size: 12px; margin-bottom: 10px;">
-                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title', extensionName: 'page_link_insights')}">
-                        <core:icon identifier="actions-close" size="small" />
-                    </button>
-                    <div class="media">
-                        <div class="media-left">
-                            <core:icon identifier="actions-document-info" size="large" />
-                        </div>
-                        <div class="media-body">
-                            Note: This analysis only includes links from content elements in column position(s): <strong>{colPosToAnalyze}</strong>
-                        </div>
-                    </div>
+        <div class="module-header compact-header">
+            <div class="header-title-row">
+                <h1>
+                    <f:translate key="module.title" extensionName="page_link_insights">Page Link Insights</f:translate>
+                </h1>
+                <div class="header-alerts">
+                    <f:if condition="{colPosToAnalyze}">
+                        <span class="badge badge-info dismissible-badge" id="colpos-info-alert" title="Analyzing colPos: {colPosToAnalyze}">
+                            <core:icon identifier="actions-document-info" size="small" /> colPos: {colPosToAnalyze}
+                            <button class="badge-dismiss-btn" type="button"><core:icon identifier="actions-close" size="small" /></button>
+                        </span>
+                    </f:if>
+                    <f:if condition="{semanticSuggestionInstalled}">
+                        <span class="badge badge-success dismissible-badge" id="semantic-enabled-alert" title="{f:translate(key: 'module.semanticEnabled', extensionName: 'page_link_insights')}">
+                            <core:icon identifier="actions-check" size="small" /> Semantic
+                            <button class="badge-dismiss-btn" type="button"><core:icon identifier="actions-close" size="small" /></button>
+                        </span>
+                    </f:if>
+                    <f:if condition="{semanticSuggestionInstalled} == 0">
+                        <span class="badge badge-warning dismissible-badge" id="semantic-disabled-alert" title="{f:translate(key: 'module.semanticDisabled', extensionName: 'page_link_insights')}">
+                            <core:icon identifier="actions-exclamation-triangle" size="small" /> No Semantic
+                            <button class="badge-dismiss-btn" type="button"><core:icon identifier="actions-close" size="small" /></button>
+                        </span>
+                    </f:if>
                 </div>
-            </f:if>
-                
-            <f:if condition="{semanticSuggestionInstalled}">
-                <div class="alert alert-info dismissible-alert" id="semantic-enabled-alert">
-                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title', extensionName: 'page_link_insights')}">
-                        <core:icon identifier="actions-close" size="small" />
-                    </button>
-                    <div class="media">
-                        <div class="media-left">
-                            <core:icon identifier="actions-document-info" size="large" />
-                        </div>
-                        <div class="media-body">
-                            <f:translate key="module.semanticEnabled" extensionName="page_link_insights">Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram.</f:translate>
-                        </div>
-                    </div>
-                </div>
-            </f:if>
-            
-            <f:if condition="{semanticSuggestionInstalled} == 0">
-                <div class="alert alert-warning dismissible-alert" id="semantic-disabled-alert">
-                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title', extensionName: 'page_link_insights')}">
-                        <core:icon identifier="actions-close" size="small" />
-                    </button>
-                    <div class="media">
-                        <div class="media-left">
-                            <core:icon identifier="status-dialog-warning" size="large" />
-                        </div>
-                        <div class="media-body">
-                            <f:translate key="module.semanticDisabled" extensionName="page_link_insights">Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</f:translate>
-                        </div>
-                    </div>
-                </div>
-            </f:if>
+            </div>
         </div>
 
 
