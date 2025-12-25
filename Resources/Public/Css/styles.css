@@ -1,0 +1,443 @@
+/* Fond sombre pour le module */
+.module {
+    background-color: #1e1e1e; /* Fond sombre */
+    color: #ffffff; /* Texte blanc */
+    margin: 15px; /* Add outer margin for proper spacing */
+    border-radius: 8px;
+}
+
+/* Style pour le header du module */
+.module-docheader {
+    background-color: #2d2d2d; /* Fond sombre pour le header */
+    border-bottom: 1px solid #444; /* Bordure subtile */
+    padding: 10px;
+}
+
+/* Style pour le corps du module */
+.module-body {
+    background-color: #1e1e1e; /* Fond sombre pour le corps */
+    color: #ffffff; /* Texte blanc */
+    padding: 20px; /* Increased padding for better spacing */
+    margin: 15px; /* Add margin to prevent "broken" appearance */
+    border-radius: 8px; /* Subtle rounded corners for modern look */
+}
+
+/* Style pour les éléments de chargement */
+.module-loading-indicator {
+    background-color: #2d2d2d; /* Fond sombre pour l'indicateur de chargement */
+    color: #ffffff; /* Texte blanc */
+}
+
+/* Style pour les tooltips */
+.node-tooltip {
+    background-color: #333; /* Fond sombre pour les tooltips */
+    color: #ffffff; /* Texte blanc */
+    border: 1px solid #555; /* Bordure subtile */
+    border-radius: 4px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Ombre légère */
+    pointer-events: none; /* Empêche le tooltip de bloquer les interactions */
+}
+
+/* Style pour l'en-tête du module */
+.module-header {
+    margin: 15px; /* Add consistent spacing */
+    padding: 15px;
+    background-color: #2d2d2d; /* Subtle background */
+    border-radius: 8px;
+}
+
+/* Responsive styles for diagram legends */
+.legend text,
+.link-legend text {
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+}
+
+/* Media queries for better legend visibility */
+@media (max-width: 768px) {
+    .legend text,
+    .link-legend text {
+        font-size: 11px; /* Slightly smaller text on mobile */
+    }
+
+    #force-diagram-container {
+        height: calc(100vh - 100px) !important; /* More space for legends on mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .legend text,
+    .link-legend text {
+        font-size: 10px; /* Even smaller on very small screens */
+    }
+
+    /* Ensure legends don't overlap with diagram content */
+    #force-diagram-container {
+        height: calc(100vh - 120px) !important;
+    }
+}
+
+/* Fit to Window Button Styles */
+.fit-to-window-button {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.fit-to-window-button:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+.fit-to-window-button:active {
+    background-color: #1d1d1d;
+}
+
+.fit-to-window-button i {
+    margin-right: 6px;
+}
+
+/* Responsive button adjustments */
+@media (max-width: 768px) {
+    .fit-to-window-button {
+        font-size: 11px;
+        padding: 6px 10px;
+        top: 5px !important;
+        right: 5px !important;
+    }
+
+    .fit-to-window-button .btn-text {
+        display: none; /* Show only icon on mobile */
+    }
+}
+
+/* Statistics Notice Styles */
+.statistics-notice {
+    background-color: #d1ecf1 !important;
+    border-color: #b6d4da !important;
+    color: #0c5460 !important;
+}
+
+.statistics-notice .media-left .fa-stack {
+    color: #17a2b8;
+}
+
+.statistics-notice .text-muted {
+    color: #6c757d !important;
+}
+
+/* Help Panel Styles */
+.help-button {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.help-button:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+.help-panel {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    width: 400px;
+    max-height: 600px;
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 1001;
+    overflow-y: auto;
+}
+
+.help-panel-header {
+    background-color: #1e1e1e;
+    padding: 10px 15px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+}
+
+.help-panel-header h4 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.help-panel-content {
+    padding: 20px;
+    color: #ffffff;
+    line-height: 1.5;
+}
+
+.help-section {
+    margin-bottom: 25px;
+    padding: 0;
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h5 {
+    margin: 0 0 8px 0;
+    color: #00ff00;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.help-section p {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.help-section ul {
+    margin: 0;
+    padding-left: 15px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.help-section li {
+    margin-bottom: 4px;
+}
+
+.help-example {
+    margin: 12px 0;
+    text-align: center;
+    background-color: #1e1e1e;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+/* Node examples */
+.help-nodes-example {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin: 12px 0;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 6px;
+    border: 1px solid #444;
+}
+
+.help-node-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.help-node-circle {
+    border-radius: 50%;
+    margin-bottom: 6px;
+    border: 2px solid #00ff00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: bold;
+    font-size: 8px;
+}
+
+.help-node-small {
+    width: 20px;
+    height: 20px;
+    background-color: #4a9eff;
+}
+
+.help-node-medium {
+    width: 30px;
+    height: 30px;
+    background-color: #ff6b35;
+}
+
+.help-node-large {
+    width: 40px;
+    height: 40px;
+    background-color: #7b68ee;
+}
+
+.help-node-label {
+    font-size: 9px;
+    color: #ccc;
+    margin-top: 4px;
+}
+
+.help-color-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    padding: 8px 0;
+}
+
+.help-color-swatch {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    margin-right: 12px;
+    border: 2px solid #555;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive adjustments for help panel */
+@media (max-width: 768px) {
+    .help-panel {
+        width: calc(100vw - 20px);
+        right: 10px;
+        left: 10px;
+        max-height: 500px;
+    }
+
+    .help-nodes-example {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .help-node-item {
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    .help-color-swatch {
+        width: 20px;
+        height: 20px;
+    }
+
+    .help-button .btn-text {
+        display: none;
+    }
+
+    .notices-button {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .notices-count {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+
+    .diagram-controls {
+        top: 5px !important;
+        right: 5px !important;
+    }
+}
+
+/* Dismissible Alerts */
+.dismissible-alert {
+    position: relative;
+    transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease;
+    overflow: hidden;
+}
+
+.dismissible-alert.fade-out {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.alert-dismiss-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+}
+
+.alert-dismiss-btn:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.alert-dismiss-btn:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.alert-info .alert-dismiss-btn:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.alert-warning .alert-dismiss-btn:hover {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* Adjust alert padding to make room for close button */
+.dismissible-alert .media {
+    padding-right: 35px;
+}
+
+/* Notices Button Styles */
+.notices-button {
+    background-color: #2d2d2d;
+    border: 1px solid #444;
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.notices-button:hover {
+    background-color: #3d3d3d;
+    border-color: #555;
+}
+
+.notices-button:active {
+    background-color: #1d1d1d;
+}
+
+.notices-count {
+    background-color: #dc3545;
+    color: white;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 16px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* Legacy support for old show-dismissed-btn */
+.show-dismissed-btn {
+    display: none;
+}

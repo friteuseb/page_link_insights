@@ -1,0 +1,39 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Cywolf\PageLinkInsights\:
+    resource: '../Classes/*'
+    exclude:
+      - '../Classes/Domain/Model/*'
+
+  Cywolf\PageLinkInsights\Controller\BackendController:
+    tags: ['backend.controller']
+    arguments:
+      $moduleTemplateFactory: '@TYPO3\CMS\Backend\Template\ModuleTemplateFactory'
+      $pageRenderer: '@TYPO3\CMS\Core\Page\PageRenderer'
+      $extensionConfiguration: '@TYPO3\CMS\Core\Configuration\ExtensionConfiguration'
+      $pageLinkService: '@Cywolf\PageLinkInsights\Service\PageLinkService'
+      $themeDataService: '@Cywolf\PageLinkInsights\Service\ThemeDataService'
+
+  Cywolf\PageLinkInsights\Service\PageLinkService:
+    public: true
+
+  Cywolf\PageLinkInsights\Service\PageMetricsService:
+    public: true
+    arguments:
+      $pageLinkService: '@Cywolf\PageLinkInsights\Service\PageLinkService'
+
+  Cywolf\PageLinkInsights\Service\ThemeDataService:
+    public: true
+
+  Cywolf\PageLinkInsights\Task\AnalyzeLinksTask:
+    public: true
+
+  Cywolf\PageLinkInsights\Event\PageMetricsEventListener:
+    tags:
+      - name: event.listener
+        identifier: 'page-link-insights/modify-documents'
+        event: ApacheSolrForTypo3\Solr\Event\Indexing\AfterPageDocumentIsCreatedForIndexingEvent

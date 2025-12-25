@@ -1,0 +1,27 @@
+plugin.tx_solr {
+    search {
+        // Configuration du scoring
+        sorting {
+            // Ajout d'une option de tri par PageRank
+            pageRankSort {
+                label = Page Rank
+                field = pagerank_floatS
+                direction = desc
+            }
+        }
+
+        // Booster les résultats en fonction du PageRank
+        relevance {
+            multiplier {
+                pagerank = 2.0
+                inboundLinks = 1.5
+            }
+            // Formule finale du score = (score de base * 1.0) + (pagerank * 2.0) + (inbound_links * 1.5)
+            formula = sum(
+                mul(queryNorm(dismax(v:1)), 1.0),
+                mul(fieldValue(pagerank_floatS), 2.0),
+                mul(fieldValue(inbound_links_intS), 1.5)
+            )
+        }
+    }
+}

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="EXT:page_link_insights/Resources/Private/Language/locallang.xlf" date="2024-02-22T12:00:00Z" product-name="page_link_insights">
+        <header/>
+        <body>
+            <trans-unit id="task.analyzeLinks.title">
+                <source>Analyze Internal Links</source>
+            </trans-unit>
+            <trans-unit id="task.analyzeLinks.description">
+                <source>Analyzes internal links and calculates PageRank and other metrics</source>
+            </trans-unit>
+            <trans-unit id="task.field.rootPageId">
+                <source>Root Page ID</source>
+            </trans-unit>
+            <trans-unit id="task.error.invalidRootPage">
+                <source>Please enter a valid root page ID (must be greater than 0)</source>
+            </trans-unit>
+             <trans-unit id="module.title">
+                <source>Page Link Insights with Semantic Suggestions</source>
+            </trans-unit>
+            <trans-unit id="module.subtitle">
+                <source>Visualize content relationships and semantic connections</source>
+            </trans-unit>
+            <trans-unit id="module.description">
+                <source>Explore how your pages connect through explicit links and semantic suggestions.</source>
+            </trans-unit>
+            <trans-unit id="module.semanticEnabled">
+                <source>Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram as purple dashed lines.</source>
+            </trans-unit>
+            <trans-unit id="module.semanticDisabled">
+                <source>Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.dominantThemes">
+                <source>Dominant Themes</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.linkTypes">
+                <source>Link Types</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.themes">
+                <source>Themes:</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.standardLinks">
+                <source>Standard Links</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.semanticSuggestions">
+                <source>Semantic Suggestions</source>
+            </trans-unit>
+            <trans-unit id="diagram.legend.brokenLinks">
+                <source>Broken Links</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.incomingLinks">
+                <source>Incoming links:</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.ctrlClickToOpen">
+                <source>Ctrl+Click to open in TYPO3</source>
+            </trans-unit>
+            <trans-unit id="diagram.tooltip.rightClickToRemove">
+                <source>Right-click to remove</source>
+            </trans-unit>
+            <trans-unit id="diagram.button.fitToWindow">
+                <source>Fit to Window</source>
+            </trans-unit>
+            <trans-unit id="statistics.notice.noData">
+                <source>No statistics available yet</source>
+            </trans-unit>
+            <trans-unit id="statistics.notice.runAnalysis">
+                <source>Run the 'Analyze Internal Links' task to generate statistics for your site.</source>
+            </trans-unit>
+            <trans-unit id="statistics.notice.schedulerInfo">
+                <source>You can configure this task in the TYPO3 Scheduler for automatic updates.</source>
+            </trans-unit>
+            <trans-unit id="help.button.title">
+                <source>Show diagram explanation</source>
+            </trans-unit>
+            <trans-unit id="help.title">
+                <source>Diagram Guide</source>
+            </trans-unit>
+            <trans-unit id="help.arrows.title">
+                <source>Arrow Directions</source>
+            </trans-unit>
+            <trans-unit id="help.arrows.description">
+                <source>Arrows point from source pages to target pages, showing the linking direction (Page A → Page B).</source>
+            </trans-unit>
+            <trans-unit id="help.colors.title">
+                <source>Link Colors</source>
+            </trans-unit>
+            <trans-unit id="help.colors.standard">
+                <source>Standard page links from content elements</source>
+            </trans-unit>
+            <trans-unit id="help.colors.semantic">
+                <source>AI-generated semantic suggestions based on content similarity</source>
+            </trans-unit>
+            <trans-unit id="help.colors.broken">
+                <source>Broken links where the target page no longer exists</source>
+            </trans-unit>
+            <trans-unit id="help.nodes.title">
+                <source>Node Information</source>
+            </trans-unit>
+            <trans-unit id="help.nodes.size">
+                <source>Node size reflects the number of incoming links to that page.</source>
+            </trans-unit>
+            <trans-unit id="help.nodes.colors">
+                <source>Node colors are based on dominant themes. Pages with similar content share similar colors.</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.title">
+                <source>Interactions</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.drag">
+                <source>Drag nodes to rearrange the diagram</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.zoom">
+                <source>Use mouse wheel to zoom, drag background to pan</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.hover">
+                <source>Hover over elements for detailed information</source>
+            </trans-unit>
+            <trans-unit id="help.interactions.ctrlclick">
+                <source>Ctrl+Click on nodes to open pages in TYPO3 backend</source>
+            </trans-unit>
+            <trans-unit id="help.overview.title">
+                <source>Overview</source>
+            </trans-unit>
+            <trans-unit id="help.overview.description">
+                <source>This diagram visualizes the relationships between pages on your site. Each circle represents a page, and arrows show linking connections.</source>
+            </trans-unit>
+            <trans-unit id="help.links.title">
+                <source>Link Types</source>
+            </trans-unit>
+            <trans-unit id="alerts.dismiss.title">
+                <source>Dismiss this notice</source>
+            </trans-unit>
+            <trans-unit id="alerts.show.dismissed">
+                <source>Show dismissed notices</source>
+            </trans-unit>
+            <trans-unit id="notices.show.title">
+                <source>Show dismissed notices</source>
+            </trans-unit>
+            <trans-unit id="notices.restored.message">
+                <source>Notices restored</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

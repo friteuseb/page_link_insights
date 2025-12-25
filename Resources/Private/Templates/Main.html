@@ -1,0 +1,334 @@
+{namespace core = TYPO3\CMS\Core\ViewHelpers}
+<f:layout name="Default" />
+
+<f:section name="content">
+        <!-- Style inline pour cacher le docheader -->
+        <style>
+            .module-docheader,
+            .t3js-module-docheader {
+                display: none !important;
+            }
+            
+            #force-diagram-container {
+                height: calc(100vh - 60px) !important;
+            }
+            
+            .module-body {
+                /* Removed conflicting margin/padding styles - now handled by CSS file */
+            }
+        </style>
+
+        <div class="module-header">
+            <h1>
+                <f:translate key="module.title">Page Link Insights</f:translate>
+                <small>
+                    <f:translate key="module.subtitle">Interactive visualization of page relationships</f:translate>
+                </small>
+            </h1>
+            
+            <p class="lead">
+                <f:translate key="module.description">Explore how your pages connect through content links and references.</f:translate>
+            </p>
+            
+            <!-- Information sur les colPos analysées -->
+            <f:if condition="{colPosToAnalyze}">
+                <div class="alert alert-info dismissible-alert" id="colpos-info-alert" style="font-size: 12px; margin-bottom: 10px;">
+                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title')}">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
+                    <div class="media">
+                        <div class="media-left">
+                            <core:icon identifier="actions-document-info" size="large" />
+                        </div>
+                        <div class="media-body">
+                            Note: This analysis only includes links from content elements in column position(s): <strong>{colPosToAnalyze}</strong>
+                        </div>
+                    </div>
+                </div>
+            </f:if>
+                
+            <f:if condition="{semanticSuggestionInstalled}">
+                <div class="alert alert-info dismissible-alert" id="semantic-enabled-alert">
+                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title')}">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
+                    <div class="media">
+                        <div class="media-left">
+                            <core:icon identifier="actions-document-info" size="large" />
+                        </div>
+                        <div class="media-body">
+                            <f:translate key="module.semanticEnabled">Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram.</f:translate>
+                        </div>
+                    </div>
+                </div>
+            </f:if>
+            
+            <f:if condition="{semanticSuggestionInstalled} == 0">
+                <div class="alert alert-warning dismissible-alert" id="semantic-disabled-alert">
+                    <button class="alert-dismiss-btn" type="button" title="{f:translate(key: 'alerts.dismiss.title')}">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
+                    <div class="media">
+                        <div class="media-left">
+                            <core:icon identifier="status-dialog-warning" size="large" />
+                        </div>
+                        <div class="media-body">
+                            <f:translate key="module.semanticDisabled">Install the "Semantic Suggestion" extension to visualize content-based page relationships in addition to manual links.</f:translate>
+                        </div>
+                    </div>
+                </div>
+            </f:if>
+        </div>
+
+
+    <div class="module">
+        <div class="module-body">
+            <!-- Compact Site Analytics -->
+            <f:if condition="{kpis}">
+                <f:if condition="{kpis.hasStatistics}">
+                    <f:then>
+                        <!-- Show statistics when available -->
+                        <div class="panel panel-default" style="font-size: 12px; margin-bottom: 0px;">
+                            <div class="panel-body" style="padding: 8px;">
+                                <div style="display: inline-block; margin-right: 15px;">
+                                    <strong>Root:</strong> {kpis.site.siteRoot}
+                                </div>
+                                <div style="display: inline-block; margin-right: 15px;">
+                                    <strong>Pages:</strong> {kpis.site.totalPages}
+                                </div>
+                                <div style="display: inline-block; margin-right: 15px;">
+                                    <strong>Links:</strong> {kpis.site.totalLinks}
+                                </div>
+                                <div style="display: inline-block; margin-right: 15px;">
+                                    <strong>Broken:</strong> {kpis.site.brokenLinksCount}
+                                </div>
+                                <div style="display: inline-block; margin-right: 15px;">
+                                    <strong>Orphaned:</strong> {kpis.site.orphanedPages}
+                                </div>
+                                <div style="display: inline-block; margin-right: 15px;">
+                                    <strong>Links/Page:</strong> {kpis.site.avgLinksPerPage}
+                                </div>
+                                <div style="display: inline-block;">
+                                    <em>Last: {kpis.site.lastUpdate}</em>
+                                </div>
+                            </div>
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <!-- Show notice when no statistics available -->
+                        <div class="alert alert-info statistics-notice" style="margin-bottom: 15px;">
+                            <div class="media">
+                                <div class="media-left">
+                                    <core:icon identifier="actions-document-synchronize" size="large" />
+                                </div>
+                                <div class="media-body">
+                                    <strong><span data-translation="statisticsNoData"></span></strong><br>
+                                    <span data-translation="statisticsRunAnalysis"></span><br>
+                                    <small class="text-muted"><span data-translation="statisticsSchedulerInfo"></span></small>
+                                </div>
+                            </div>
+                        </div>
+                    </f:else>
+                </f:if>
+            </f:if>
+
+            <!-- Force Diagram -->
+            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e; position: relative;">
+                <!-- Control Buttons -->
+                <div class="diagram-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
+                    <button id="show-notices-btn" class="btn btn-default notices-button" style="display: none; margin-right: 5px;" title="{f:translate(key: 'notices.show.title')}">
+                        <core:icon identifier="actions-document-info" size="small" />
+                        <span class="notices-count"></span>
+                    </button>
+                    <button id="filters-btn" class="btn btn-default filters-button" title="Filter links" style="margin-right: 5px;">
+                        <core:icon identifier="actions-filter" />
+                    </button>
+                    <button id="help-btn" class="btn btn-default help-button" title="{f:translate(key: 'help.button.title')}">
+                        <core:icon identifier="actions-question" />
+                    </button>
+                    <button id="fit-to-window-btn" class="btn btn-default fit-to-window-button" style="margin-left: 5px;">
+                        <core:icon identifier="actions-expand" /> <span class="btn-text" data-translation="fitToWindow"></span>
+                    </button>
+                </div>
+
+                <!-- Filters Panel -->
+                <div id="filters-panel" class="filters-panel" style="display: none; position: absolute; top: 10px; left: 20px; z-index: 1000; background: rgba(40, 44, 52, 0.95); border: 1px solid #555; border-radius: 4px; padding: 15px; min-width: 250px; color: #00ff00; font-family: Arial; backdrop-filter: blur(5px);">
+                    <div class="filters-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: #00ff00;">Filter Options</h4>
+                        <button id="filters-close-btn" class="btn btn-sm btn-default">
+                            <core:icon identifier="actions-close" />
+                        </button>
+                    </div>
+                    <div class="filters-panel-content">
+                        <!-- Link Type Filters -->
+                        <div class="filter-section" style="margin-bottom: 15px;">
+                            <h5 style="color: #00ff00; margin-bottom: 10px;">Link Types:</h5>
+                            <div class="filter-checkboxes">
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-standard" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #999; margin-right: 5px; vertical-align: middle;"></span>
+                                    Standard Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-semantic" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #9c27b0; margin-right: 5px; vertical-align: middle;"></span>
+                                    Semantic Suggestions
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-broken" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #ff0000; margin-right: 5px; vertical-align: middle;"></span>
+                                    Broken Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-menu" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #00ffff; margin-right: 5px; vertical-align: middle;"></span>
+                                    Menu Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-html" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #ff00ff; margin-right: 5px; vertical-align: middle;"></span>
+                                    HTML Links
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-typolink" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #ffcc00; margin-right: 5px; vertical-align: middle;"></span>
+                                    TypoLinks
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="filter-section" style="margin-bottom: 10px;">
+                            <div style="display: flex; gap: 8px;">
+                                <button id="filter-select-all" class="btn btn-xs btn-default" style="flex: 1;">Select All</button>
+                                <button id="filter-deselect-all" class="btn btn-xs btn-default" style="flex: 1;">Deselect All</button>
+                            </div>
+                        </div>
+
+                        <!-- Depth Filter -->
+                        <div class="filter-section" style="margin-bottom: 15px;">
+                            <h5 style="color: #00ff00; margin-bottom: 10px;">Depth Limit:</h5>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label style="color: #00ff00;">Max Depth:</label>
+                                <input type="range" id="depth-slider" min="1" max="10" value="10" style="flex: 1;">
+                                <span id="depth-value" style="color: #00ff00; min-width: 30px;">∞</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <label style="display: block; cursor: pointer; color: #00ff00;">
+                                    <input type="checkbox" id="depth-from-root" style="margin-right: 8px;">
+                                    Calculate from site root
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Nodes Filter -->
+                        <div class="filter-section">
+                            <h5 style="color: #00ff00; margin-bottom: 10px;">Node Options:</h5>
+                            <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                <input type="checkbox" id="filter-orphaned-nodes" checked style="margin-right: 8px;">
+                                Show Orphaned Nodes
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help Panel -->
+                <div id="help-panel" class="help-panel" style="display: none;">
+                    <div class="help-panel-header">
+                        <h4><span data-translation="helpTitle"></span></h4>
+                        <button id="help-close-btn" class="btn btn-sm btn-default">
+                            <core:icon identifier="actions-close" />
+                        </button>
+                    </div>
+                    <div class="help-panel-content">
+                        <!-- Overview Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpOverviewTitle"></span></h5>
+                            <p><span data-translation="helpOverviewDescription"></span></p>
+                        </div>
+
+                        <!-- Node Information Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpNodesTitle"></span></h5>
+                            <p><span data-translation="helpNodesSize"></span></p>
+                            <div class="help-nodes-example">
+                                <div class="help-node-item">
+                                    <div class="help-node-circle help-node-small">1-2</div>
+                                    <div class="help-node-label">Small<br>Few links</div>
+                                </div>
+                                <div class="help-node-item">
+                                    <div class="help-node-circle help-node-medium">3-5</div>
+                                    <div class="help-node-label">Medium<br>Some links</div>
+                                </div>
+                                <div class="help-node-item">
+                                    <div class="help-node-circle help-node-large">6+</div>
+                                    <div class="help-node-label">Large<br>Many links</div>
+                                </div>
+                            </div>
+                            <p><span data-translation="helpNodesColors"></span></p>
+                        </div>
+
+                        <!-- Link Colors Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpLinksTitle"></span></h5>
+                            <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #999;"></span>
+                                <strong><span data-translation="helpColorsStandard"></span></strong>
+                            </div>
+                            <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #9c27b0;"></span>
+                                <strong><span data-translation="helpColorsSemantic"></span></strong>
+                            </div>
+                            <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #ff0000;"></span>
+                                <strong><span data-translation="helpColorsBroken"></span></strong>
+                            </div>
+                        </div>
+
+                        <!-- Arrow Directions Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpArrowsTitle"></span></h5>
+                            <p><span data-translation="helpArrowsDescription"></span></p>
+                            <div class="help-example">
+                                <svg width="180" height="50" viewBox="0 0 180 50">
+                                    <defs>
+                                        <marker id="help-arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+                                            <path d="M0,-5L10,0L0,5" fill="#999"/>
+                                        </marker>
+                                    </defs>
+                                    <!-- Source node -->
+                                    <circle cx="25" cy="25" r="15" fill="#4a9eff" stroke="#00ff00" stroke-width="2"/>
+                                    <text x="25" y="30" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">Home</text>
+                                    <!-- Arrow -->
+                                    <line x1="45" y1="25" x2="135" y2="25" stroke="#999" stroke-width="3" marker-end="url(#help-arrow)"/>
+                                    <text x="90" y="18" text-anchor="middle" fill="#00ff00" font-size="10">Link direction</text>
+                                    <!-- Target node -->
+                                    <circle cx="155" cy="25" r="15" fill="#ff6b35" stroke="#00ff00" stroke-width="2"/>
+                                    <text x="155" y="30" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">About</text>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Interactions Section -->
+                        <div class="help-section">
+                            <h5><span data-translation="helpInteractionsTitle"></span></h5>
+                            <ul>
+                                <li><strong>🖱️ <span data-translation="helpInteractionsDrag"></span></strong></li>
+                                <li><strong>🔍 <span data-translation="helpInteractionsZoom"></span></strong></li>
+                                <li><strong>ℹ️ <span data-translation="helpInteractionsHover"></span></strong></li>
+                                <li><strong>🔗 <span data-translation="helpInteractionsCtrlClick"></span></strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <svg id="force-diagram" class="w-full h-full"></svg>
+                <script id="diagram-data" type="application/json">
+                    <f:format.raw>{data}</f:format.raw>
+                </script>
+                <script id="diagram-translations" type="application/json">
+                    <f:format.raw>{translations}</f:format.raw>
+                </script>
+            </div>
+        </div>
+    </div>
+</f:section>
