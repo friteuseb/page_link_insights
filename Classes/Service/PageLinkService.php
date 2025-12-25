@@ -120,50 +120,92 @@ class PageLinkService
     private function getSemanticSuggestionLinks(array $pageUids): array
     {
         $links = [];
-        
+
         if (empty($pageUids) || !$this->shouldIncludeSemanticSuggestions()) {
             return $links;
         }
+
+        // Get semantic_suggestion configuration to match frontend display
+        $semanticConfig = $this->getSemanticSuggestionConfig();
+        $maxSuggestions = $semanticConfig['maxSuggestions'];
+        $proximityThreshold = $semanticConfig['proximityThreshold'];
 
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_semanticsuggestion_similarities');
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction());
-        
+
         $similarities = $queryBuilder
             ->select('page_id', 'similar_page_id', 'similarity_score')
             ->from('tx_semanticsuggestion_similarities')
             ->where(
                 $queryBuilder->expr()->in(
                     'page_id',
-                    $queryBuilder->createNamedParameter($pageUids, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                    $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
                 ),
-                // Use the similarity threshold defined in Semantic Suggestion if possible
-                $queryBuilder->expr()->gt(
+                $queryBuilder->expr()->gte(
                     'similarity_score',
-                    $queryBuilder->createNamedParameter(0.3, ParameterType::STRING) // Using Doctrine ParameterType (correct)
-                    )
+                    $queryBuilder->createNamedParameter($proximityThreshold, ParameterType::STRING)
+                )
             )
-            ->orderBy('similarity_score', 'DESC')
+            ->orderBy('page_id', 'ASC')
+            ->addOrderBy('similarity_score', 'DESC')
             ->executeQuery()
             ->fetchAllAssociative();
-        
+
+        // Limit suggestions per page (like frontend does)
+        $suggestionsPerPage = [];
         foreach ($similarities as $similarity) {
+            $pageId = (int)$similarity['page_id'];
+
+            if (!isset($suggestionsPerPage[$pageId])) {
+                $suggestionsPerPage[$pageId] = 0;
+            }
+
+            // Only include up to maxSuggestions per page (matching frontend behavior)
+            if ($suggestionsPerPage[$pageId] >= $maxSuggestions) {
+                continue;
+            }
+
+            $suggestionsPerPage[$pageId]++;
+
             $links[] = [
                 'sourcePageId' => (string)$similarity['page_id'],
                 'targetPageId' => (string)$similarity['similar_page_id'],
                 'contentElement' => [
-                    'uid' => 0, // No specific content element
+                    'uid' => 0,
                     'type' => 'semantic_suggestion',
                     'header' => 'Semantic Suggestion',
-                    'colPos' => -1 // Special value to indicate it's a suggestion
+                    'colPos' => -1
                 ],
                 'similarity' => $similarity['similarity_score'],
                 'isSemantic' => true
             ];
         }
-        
+
         return $links;
+    }
+
+    /**
+     * Get semantic_suggestion extension configuration
+     */
+    private function getSemanticSuggestionConfig(): array
+    {
+        try {
+            $config = GeneralUtility::makeInstance(ExtensionConfiguration::class)
+                ->get('semantic_suggestion');
+
+            return [
+                'maxSuggestions' => (int)($config['settings.maxSuggestions'] ?? $config['maxSuggestions'] ?? 5),
+                'proximityThreshold' => (float)($config['settings.proximityThreshold'] ?? $config['proximityThreshold'] ?? 0.3),
+            ];
+        } catch (\Exception $e) {
+            // Default values if config not available
+            return [
+                'maxSuggestions' => 5,
+                'proximityThreshold' => 0.3,
+            ];
+        }
     }
 
     /**

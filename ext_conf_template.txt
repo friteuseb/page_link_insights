@@ -4,8 +4,8 @@ colPosToAnalyze = 0,2
 # cat=basic/enable; type=boolean; label=Include hidden content
 includeHidden = 0
 
-# cat=basic/enable; type=boolean; label=Include Semantic Suggestions (links from semantic_suggestion extension)
-includeSemanticSuggestions = 0
+# cat=basic/enable; type=boolean; label=Include Semantic Suggestions (limited to maxSuggestions per page, matching frontend display)
+includeSemanticSuggestions = 1
 
 # cat=advanced/enable; type=boolean; label=Include shortcut pages in diagrams
 includeShortcuts = 0
