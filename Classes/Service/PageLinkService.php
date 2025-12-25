@@ -104,53 +104,38 @@ class PageLinkService
 
     public function getPageLinksForSubtree(int $pageUid): array
     {
-        error_log("Starting getPageLinksForSubtree with pageUid: $pageUid");
-        
-        // Get all pages in the subtree
+        // Get all pages in the subtree (only pages under the selected page)
         $pages = $this->getPageTreeInfo($pageUid);
-        error_log("Found initial pages: " . json_encode($pages));
-        
+
         if (empty($pages)) {
             return ['nodes' => [], 'links' => []];
         }
-    
-        // Get all content elements and their links from all pages in the subtree
+
+        // Get all content elements and their links from pages in the subtree
         $pageUids = array_column($pages, 'uid');
-        $allLinks = [];
-        
-        // Get direct content links
-        $contentLinks = $this->getContentElementLinks($pageUids);
-        $allLinks = array_merge($allLinks, $contentLinks);
-        
-        // Collect all page UIDs referenced in links
-        $referencedPageIds = [];
-        foreach ($allLinks as $link) {
-            $referencedPageIds[] = $link['sourcePageId'];
-            $referencedPageIds[] = $link['targetPageId'];
-        }
-        $referencedPageIds = array_unique($referencedPageIds);
-        
-        // Get additional page information for referenced pages
-        // Convert pageUids to strings for proper comparison (referencedPageIds are strings)
-        $pageUidsAsStrings = array_map('strval', $pageUids);
-        $missingPageIds = array_diff($referencedPageIds, $pageUidsAsStrings);
-        if (!empty($missingPageIds)) {
-            $additionalPages = $this->getAdditionalPagesInfo($missingPageIds);
-            $pages = array_merge($pages, $additionalPages);
-        }
+        $pageUidsString = array_map('strval', $pageUids);
 
-        // Deduplicate pages by UID
-        $pages = $this->deduplicatePages($pages);
+        // Get direct content links (already filtered by colPos in getContentElementLinks)
+        $allLinks = $this->getContentElementLinks($pageUids);
 
-        // Mark broken links using linkvalidator if available, otherwise fallback to simple check
-        $pageIdsAsStrings = array_map('strval', array_column($pages, 'uid'));
+        // Filter links to only keep those where BOTH source AND target are in the subtree
+        // This ensures we only see links between pages in the current view
+        $allLinks = array_filter($allLinks, function($link) use ($pageUidsString) {
+            return in_array($link['sourcePageId'], $pageUidsString, true)
+                && in_array($link['targetPageId'], $pageUidsString, true);
+        });
+
+        // Re-index array after filtering
+        $allLinks = array_values($allLinks);
+
+        // Mark broken links using linkvalidator if available
         $linkvalidatorBrokenLinks = $this->getLinkvalidatorBrokenLinks($pageUids);
 
-        $allLinks = array_map(function($link) use ($pageIdsAsStrings, $linkvalidatorBrokenLinks) {
+        $allLinks = array_map(function($link) use ($pageUidsString, $linkvalidatorBrokenLinks) {
             $sourceId = (int)$link['sourcePageId'];
             $targetId = (int)$link['targetPageId'];
 
-            // First check linkvalidator data if available
+            // Check linkvalidator data if available
             if (!empty($linkvalidatorBrokenLinks)) {
                 if (isset($linkvalidatorBrokenLinks[$sourceId])) {
                     foreach ($linkvalidatorBrokenLinks[$sourceId] as $brokenLink) {
@@ -163,23 +148,11 @@ class PageLinkService
                 }
             }
 
-            // Fallback: check if pages exist in our tree
-            $link['broken'] = !in_array($link['sourcePageId'], $pageIdsAsStrings) || !in_array($link['targetPageId'], $pageIdsAsStrings);
-            if ($link['broken']) {
-                $link['brokenSource'] = 'page_not_found';
-            }
+            // Links are already filtered to subtree, so they're not broken by default
+            $link['broken'] = false;
             return $link;
         }, $allLinks);
 
-        // Add logging for broken links
-        $brokenLinks = array_filter($allLinks, function($link) {
-            return $link['broken'] ?? false;
-        });
-    
-        if (!empty($brokenLinks)) {
-            error_log("Broken links found: " . json_encode($brokenLinks));
-        }
-    
         return [
             'nodes' => array_values(array_map(fn($page) => [
                 'id' => (string)$page['uid'],
@@ -202,45 +175,62 @@ class PageLinkService
         $threshold = $semanticSettings['qualityLevel'];
         $maxSuggestionsPerPage = $semanticSettings['maxSuggestions'];
 
-        // Get suggestions for each page, respecting the limit per page (like frontend display)
-        foreach ($pageUids as $pageUid) {
-            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_semanticsuggestion_similarities');
-            $queryBuilder->getRestrictions()
-                ->removeAll()
-                ->add(new DeletedRestriction());
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_semanticsuggestion_similarities');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction());
 
-            $similarities = $queryBuilder
-                ->select('page_id', 'similar_page_id', 'similarity_score')
-                ->from('tx_semanticsuggestion_similarities')
-                ->where(
-                    $queryBuilder->expr()->eq(
-                        'page_id',
-                        $queryBuilder->createNamedParameter($pageUid, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
-                    ),
-                    $queryBuilder->expr()->gte(
-                        'similarity_score',
-                        $queryBuilder->createNamedParameter($threshold, ParameterType::STRING)
-                    )
+        // Only get suggestions where BOTH source AND target are in the subtree
+        $similarities = $queryBuilder
+            ->select('page_id', 'similar_page_id', 'similarity_score')
+            ->from('tx_semanticsuggestion_similarities')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'page_id',
+                    $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->in(
+                    'similar_page_id',
+                    $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->gte(
+                    'similarity_score',
+                    $queryBuilder->createNamedParameter($threshold, ParameterType::STRING)
                 )
-                ->orderBy('similarity_score', 'DESC')
-                ->setMaxResults($maxSuggestionsPerPage)
-                ->executeQuery()
-                ->fetchAllAssociative();
+            )
+            ->orderBy('page_id', 'ASC')
+            ->addOrderBy('similarity_score', 'DESC')
+            ->executeQuery()
+            ->fetchAllAssociative();
 
-            foreach ($similarities as $similarity) {
-                $links[] = [
-                    'sourcePageId' => (string)$similarity['page_id'],
-                    'targetPageId' => (string)$similarity['similar_page_id'],
-                    'contentElement' => [
-                        'uid' => 0,
-                        'type' => 'semantic_suggestion',
-                        'header' => 'Semantic Suggestion',
-                        'colPos' => -1
-                    ],
-                    'similarity' => $similarity['similarity_score'],
-                    'isSemantic' => true
-                ];
+        // Limit suggestions per page (like frontend does)
+        $suggestionsPerPage = [];
+        foreach ($similarities as $similarity) {
+            $pageId = (int)$similarity['page_id'];
+
+            if (!isset($suggestionsPerPage[$pageId])) {
+                $suggestionsPerPage[$pageId] = 0;
             }
+
+            // Only include up to maxSuggestions per page (matching frontend behavior)
+            if ($suggestionsPerPage[$pageId] >= $maxSuggestionsPerPage) {
+                continue;
+            }
+
+            $suggestionsPerPage[$pageId]++;
+
+            $links[] = [
+                'sourcePageId' => (string)$similarity['page_id'],
+                'targetPageId' => (string)$similarity['similar_page_id'],
+                'contentElement' => [
+                    'uid' => 0,
+                    'type' => 'semantic_suggestion',
+                    'header' => 'Semantic Suggestion',
+                    'colPos' => -1
+                ],
+                'similarity' => $similarity['similarity_score'],
+                'isSemantic' => true
+            ];
         }
 
         return $links;

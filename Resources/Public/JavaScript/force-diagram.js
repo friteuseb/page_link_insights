@@ -82,10 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialiser le groupe `g` pour les éléments du diagramme
         const g = svg.append("g");
 
-        // Échelle pour la taille des nœuds
-        const nodeScale = d3.scaleLinear()
-            .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
-            .range([baseNodeRadius, baseNodeRadius * 2.5]);
+        // Échelle pour la taille des nœuds (sqrt pour une meilleure proportionnalité visuelle)
+        const minNodeRadius = 12;
+        const maxNodeRadius = 50;
+        const maxIncomingLinks = d3.max(diagramData.nodes, d => d.incomingLinks) || 1;
+        const nodeScale = d3.scaleSqrt()
+            .domain([0, maxIncomingLinks])
+            .range([minNodeRadius, maxNodeRadius]);
 
         // Calculer une couleur basée sur le thème principal de la page
         const themeColorScale = d3.scaleOrdinal()
