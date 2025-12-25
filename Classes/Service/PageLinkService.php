@@ -59,55 +59,36 @@ class PageLinkService
 
     public function getPageLinksForSubtree(int $pageUid): array
     {
-        error_log("Starting getPageLinksForSubtree with pageUid: $pageUid");
-        
-        // Get all pages in the subtree
+        // Get all pages in the subtree (only pages under the selected page)
         $pages = $this->getPageTreeInfo($pageUid);
-        error_log("Found initial pages: " . json_encode($pages));
-        
+
         if (empty($pages)) {
             return ['nodes' => [], 'links' => []];
         }
-    
-        // Get all content elements and their links from all pages in the subtree
+
+        // Get all content elements and their links from pages in the subtree
         $pageUids = array_column($pages, 'uid');
-        $allLinks = [];
-        
-        // Get direct content links
-        $contentLinks = $this->getContentElementLinks($pageUids);
-        $allLinks = array_merge($allLinks, $contentLinks);
-        
-        // Collect all page UIDs referenced in links
-        $referencedPageIds = [];
-        foreach ($allLinks as $link) {
-            $referencedPageIds[] = $link['sourcePageId'];
-            $referencedPageIds[] = $link['targetPageId'];
-        }
-        $referencedPageIds = array_unique($referencedPageIds);
-        
-        // Get additional page information for referenced pages
-        $missingPageIds = array_diff($referencedPageIds, $pageUids);
-        if (!empty($missingPageIds)) {
-            $additionalPages = $this->getAdditionalPagesInfo($missingPageIds);
-            $pages = array_merge($pages, $additionalPages);
-        }
-    
-        // Mark broken links
-        $pageIds = array_column($pages, 'uid');
-        $allLinks = array_map(function($link) use ($pageIds) {
-            $link['broken'] = !in_array($link['sourcePageId'], $pageIds) || !in_array($link['targetPageId'], $pageIds);
+        $pageUidsString = array_map('strval', $pageUids);
+
+        // Get direct content links (already filtered by colPos in getContentElementLinks)
+        $allLinks = $this->getContentElementLinks($pageUids);
+
+        // Filter links to only keep those where BOTH source AND target are in the subtree
+        // This ensures we only see links between pages in the current view
+        $allLinks = array_filter($allLinks, function($link) use ($pageUidsString) {
+            return in_array($link['sourcePageId'], $pageUidsString, true)
+                && in_array($link['targetPageId'], $pageUidsString, true);
+        });
+
+        // Re-index array after filtering
+        $allLinks = array_values($allLinks);
+
+        // Mark broken links (links to non-existent pages)
+        $allLinks = array_map(function($link) use ($pageUidsString) {
+            $link['broken'] = !in_array($link['targetPageId'], $pageUidsString, true);
             return $link;
         }, $allLinks);
-    
-        // Add logging for broken links
-        $brokenLinks = array_filter($allLinks, function($link) use ($pageIds) {
-            return !in_array($link['sourcePageId'], $pageIds) || !in_array($link['targetPageId'], $pageIds);
-        });
-    
-        if (!empty($brokenLinks)) {
-            error_log("Broken links found: " . json_encode($brokenLinks));
-        }
-    
+
         return [
             'nodes' => array_values(array_map(fn($page) => [
                 'id' => (string)$page['uid'],
@@ -135,12 +116,17 @@ class PageLinkService
             ->removeAll()
             ->add(new DeletedRestriction());
 
+        // Only get suggestions where BOTH source AND target are in the subtree
         $similarities = $queryBuilder
             ->select('page_id', 'similar_page_id', 'similarity_score')
             ->from('tx_semanticsuggestion_similarities')
             ->where(
                 $queryBuilder->expr()->in(
                     'page_id',
+                    $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->in(
+                    'similar_page_id',
                     $queryBuilder->createNamedParameter($pageUids, Connection::PARAM_INT_ARRAY)
                 ),
                 $queryBuilder->expr()->gte(
