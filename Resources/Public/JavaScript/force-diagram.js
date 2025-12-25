@@ -55,7 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('force-diagram-container');
         const width = container.clientWidth;
         const height = container.clientHeight;
-        const baseNodeRadius = 20;  // Rayon de base pour les nœuds
+        const minNodeRadius = 12;   // Rayon minimum pour les nœuds sans liens entrants
+        const maxNodeRadius = 50;   // Rayon maximum pour les nœuds les plus connectés
 
         console.log('Dimensions:', { width, height });
 
@@ -82,10 +83,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialiser le groupe `g` pour les éléments du diagramme
         const g = svg.append("g");
 
-        // Échelle pour la taille des nœuds
-        const nodeScale = d3.scaleLinear()
-            .domain([0, d3.max(diagramData.nodes, d => d.incomingLinks)])
-            .range([baseNodeRadius, baseNodeRadius * 2.5]);
+        // Échelle pour la taille des nœuds - proportionnelle aux liens entrants
+        // Utilisation d'une échelle sqrt pour mieux différencier les petites valeurs
+        const maxIncomingLinks = d3.max(diagramData.nodes, d => d.incomingLinks) || 1;
+        const nodeScale = d3.scaleSqrt()
+            .domain([0, maxIncomingLinks])
+            .range([minNodeRadius, maxNodeRadius]);
 
         // Calculer une couleur basée sur le thème principal de la page
         const themeColorScale = d3.scaleOrdinal()
@@ -100,12 +103,13 @@ document.addEventListener('DOMContentLoaded', function() {
         themeColorScale.domain(uniqueThemes);
 
         // Définir les marqueurs pour les flèches
+        // Le refX est ajusté dynamiquement lors du rendu pour chaque lien
         svg.append("defs").selectAll("marker")
             .data(["end"])
             .join("marker")
             .attr("id", d => d)
             .attr("viewBox", "0 -5 10 10")
-            .attr("refX", d => nodeScale(d3.max(diagramData.nodes, d => d.incomingLinks)) + 10)
+            .attr("refX", 25) // Position de base, ajustée par le rayon du nœud cible
             .attr("refY", 0)
             .attr("markerWidth", 6)
             .attr("markerHeight", 6)
