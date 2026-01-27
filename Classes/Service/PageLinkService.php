@@ -500,10 +500,8 @@ private function getPageTreeInfo(int $rootPageId): array
                 }
             }
 
-            // Special processing for contents with referenced pages
-            if (str_starts_with($content['CType'], 'menu_') ||
-                !empty($content['pages']) ||
-                str_contains($content['CType'], 'list')) {
+            // Special processing for menu content elements with explicit page references
+            if (str_starts_with($content['CType'], 'menu_')) {
                 $this->processMenuElement($content, $links);
             }
         }
@@ -615,15 +613,18 @@ private function getPageTreeInfo(int $rootPageId): array
         return $count > 0;
     }
 
-    private function processMenuElement(array $content, array &$links): void    {
-            // Check that the element is in an allowed colPos
-    if (!in_array($content['colPos'], $this->allowedColPos)) {
-        return;
-    }
+    private function processMenuElement(array $content, array &$links): void
+    {
+        // Check that the element is in an allowed colPos
+        if (!in_array($content['colPos'], $this->allowedColPos)) {
+            return;
+        }
+
         switch ($content['CType']) {
             case 'menu_subpages':
             case 'menu_card_dir':
             case 'menu_card_list':
+                // These menus reference a parent page and display its children
                 if (!empty($content['pages'])) {
                     $parentPageUid = (int)$content['pages'];
                     $subPages = $this->getSubPages($parentPageUid);
@@ -632,23 +633,22 @@ private function getPageTreeInfo(int $rootPageId): array
                     }
                 }
                 break;
-                
+
             case 'menu_sitemap':
             case 'menu_sitemap_pages':
-                // For a sitemap, we retrieve all pages from the root
-                $rootLine = $this->getRootLine((int)$content['pid']);
-                if (!empty($rootLine)) {
-                    $rootPageUid = $rootLine[0]['uid'];
-                    $allPages = $this->getAllPagesFromRoot($rootPageUid);
-                    foreach ($allPages as $page) {
-                        if ($page['uid'] !== $content['pid']) { // Avoid self-reference
-                            $this->addLink($content, (string)$page['uid'], $links);
-                        }
-                    }
-                }
+                // Sitemaps link to ALL pages in the site -- skip them
+                // as they represent navigational structure, not editorial links
                 break;
-                
+
+            case 'menu_pages':
+            case 'menu_categorized_pages':
+            case 'menu_categorized_content':
+            case 'menu_recently_updated':
+            case 'menu_related_pages':
+            case 'menu_section':
+            case 'menu_section_pages':
             default:
+                // Explicit page list from the 'pages' field
                 if (!empty($content['pages'])) {
                     $pages = GeneralUtility::intExplode(',', $content['pages'], true);
                     foreach ($pages as $pageUid) {
