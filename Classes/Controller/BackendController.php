@@ -73,16 +73,18 @@ class BackendController extends ActionController
         // Prepare the data as usual...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
-        
+        $pageMetrics = $pageUid > 0 ? $this->getPageMetrics($pageUid) : [];
+
         // Check if semantic suggestions should be included (both extension availability and configuration)
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
-        
+
         // Prepare translations for JavaScript with fallbacks
         $translations = $this->getTranslationsWithFallbacks();
 
         $view->assignMultiple([
             'data' => json_encode($data),
             'kpis' => $kpis,
+            'pageMetrics' => $pageMetrics,
             'noPageSelected' => ($pageUid === 0),
             'colPosToAnalyze' => $colPosToAnalyze,
             'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
@@ -117,7 +119,8 @@ class BackendController extends ActionController
         // Prepare the data as usual...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
-        
+        $pageMetrics = $pageUid > 0 ? $this->getPageMetrics($pageUid) : [];
+
         // Check if semantic suggestions should be included (both extension availability and configuration)
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
 
@@ -128,6 +131,7 @@ class BackendController extends ActionController
         $moduleTemplate->assignMultiple([
             'data' => json_encode($data),
             'kpis' => $kpis,
+            'pageMetrics' => $pageMetrics,
             'noPageSelected' => ($pageUid === 0),
             'colPosToAnalyze' => $colPosToAnalyze,
             'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
@@ -251,8 +255,83 @@ class BackendController extends ActionController
         if (!isset($GLOBALS['PAGE_LINK_INSIGHTS_DEBUG'])) {
             $GLOBALS['PAGE_LINK_INSIGHTS_DEBUG'] = [];
         }
-        
+
         $GLOBALS['PAGE_LINK_INSIGHTS_DEBUG'][] = $debugInfo;
+    }
+
+    /**
+     * Get page metrics from analysis table (latest entry per page)
+     */
+    protected function getPageMetrics(int $pageUid): array
+    {
+        if ($pageUid === 0) {
+            return [];
+        }
+
+        $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
+
+        // Get all pages in the subtree
+        $subtreePageIds = $this->pageLinkService->getSubtreePageIds($pageUid);
+
+        if (empty($subtreePageIds)) {
+            return [];
+        }
+
+        // First, get the latest tstamp for each page_uid
+        $subQueryBuilder = $connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_pageanalysis');
+        $subQuery = $subQueryBuilder
+            ->select('page_uid')
+            ->addSelectLiteral('MAX(tstamp) as max_tstamp')
+            ->from('tx_pagelinkinsights_pageanalysis')
+            ->where(
+                $subQueryBuilder->expr()->in(
+                    'page_uid',
+                    $subQueryBuilder->createNamedParameter($subtreePageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                )
+            )
+            ->groupBy('page_uid')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        if (empty($subQuery)) {
+            return [];
+        }
+
+        // Build conditions for latest entries
+        $queryBuilder = $connectionPool->getQueryBuilderForTable('tx_pagelinkinsights_pageanalysis');
+        $orConditions = [];
+        foreach ($subQuery as $row) {
+            $orConditions[] = $queryBuilder->expr()->and(
+                $queryBuilder->expr()->eq('pa.page_uid', $queryBuilder->createNamedParameter((int)$row['page_uid'], \TYPO3\CMS\Core\Database\Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq('pa.tstamp', $queryBuilder->createNamedParameter((int)$row['max_tstamp'], \TYPO3\CMS\Core\Database\Connection::PARAM_INT))
+            );
+        }
+
+        $result = $queryBuilder
+            ->select(
+                'pa.page_uid',
+                'pa.pagerank',
+                'pa.inbound_links',
+                'pa.outbound_links',
+                'pa.broken_links',
+                'pa.centrality_score',
+                'p.title'
+            )
+            ->from('tx_pagelinkinsights_pageanalysis', 'pa')
+            ->join(
+                'pa',
+                'pages',
+                'p',
+                $queryBuilder->expr()->eq('pa.page_uid', $queryBuilder->quoteIdentifier('p.uid'))
+            )
+            ->where(
+                $queryBuilder->expr()->or(...$orConditions)
+            )
+            ->orderBy('pa.pagerank', 'DESC')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return $result;
     }
 
     protected function getDebugLog(): array
@@ -301,6 +380,18 @@ class BackendController extends ActionController
             'noticesRestoredMessage' => 'Notices restored',
             'fullscreen' => 'Fullscreen',
             'exitFullscreen' => 'Exit Fullscreen',
+            'tableTitle' => 'Page Metrics',
+            'tableColumnPage' => 'Page',
+            'tableColumnPagerank' => 'PageRank',
+            'tableColumnInbound' => 'Inbound Links',
+            'tableColumnOutbound' => 'Outbound Links',
+            'tableColumnCentrality' => 'Centrality',
+            'tableToggleShow' => 'Show Page Metrics',
+            'tableToggleHide' => 'Hide Page Metrics',
+            'tableTooltipPagerank' => 'PageRank score (0-1): Measures page importance based on incoming links. Higher values indicate more important pages that receive more links from other pages.',
+            'tableTooltipInbound' => 'Number of internal links pointing TO this page from other pages in the site.',
+            'tableTooltipOutbound' => 'Number of internal links going FROM this page to other pages in the site.',
+            'tableTooltipCentrality' => 'Betweenness centrality score: Measures how often this page lies on the shortest path between other pages. High values indicate key connector pages.',
         ];
 
         $translationKeys = [
@@ -339,6 +430,18 @@ class BackendController extends ActionController
             'noticesRestoredMessage' => 'notices.restored.message',
             'fullscreen' => 'diagram.button.fullscreen',
             'exitFullscreen' => 'diagram.button.exitFullscreen',
+            'tableTitle' => 'table.title',
+            'tableColumnPage' => 'table.column.page',
+            'tableColumnPagerank' => 'table.column.pagerank',
+            'tableColumnInbound' => 'table.column.inbound',
+            'tableColumnOutbound' => 'table.column.outbound',
+            'tableColumnCentrality' => 'table.column.centrality',
+            'tableToggleShow' => 'table.toggle.show',
+            'tableToggleHide' => 'table.toggle.hide',
+            'tableTooltipPagerank' => 'table.tooltip.pagerank',
+            'tableTooltipInbound' => 'table.tooltip.inbound',
+            'tableTooltipOutbound' => 'table.tooltip.outbound',
+            'tableTooltipCentrality' => 'table.tooltip.centrality',
         ];
 
         $translations = [];

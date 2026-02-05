@@ -147,6 +147,42 @@
             <trans-unit id="diagram.button.exitFullscreen">
                 <source>Exit Fullscreen</source>
             </trans-unit>
+            <trans-unit id="table.title">
+                <source>Page Metrics</source>
+            </trans-unit>
+            <trans-unit id="table.column.page">
+                <source>Page</source>
+            </trans-unit>
+            <trans-unit id="table.column.pagerank">
+                <source>PageRank</source>
+            </trans-unit>
+            <trans-unit id="table.column.inbound">
+                <source>Inbound Links</source>
+            </trans-unit>
+            <trans-unit id="table.column.outbound">
+                <source>Outbound Links</source>
+            </trans-unit>
+            <trans-unit id="table.column.centrality">
+                <source>Centrality</source>
+            </trans-unit>
+            <trans-unit id="table.toggle.show">
+                <source>Show Page Metrics</source>
+            </trans-unit>
+            <trans-unit id="table.toggle.hide">
+                <source>Hide Page Metrics</source>
+            </trans-unit>
+            <trans-unit id="table.tooltip.pagerank">
+                <source>PageRank score (0-1): Measures page importance based on incoming links. Higher values indicate more important pages that receive more links from other pages.</source>
+            </trans-unit>
+            <trans-unit id="table.tooltip.inbound">
+                <source>Number of internal links pointing TO this page from other pages in the site.</source>
+            </trans-unit>
+            <trans-unit id="table.tooltip.outbound">
+                <source>Number of internal links going FROM this page to other pages in the site.</source>
+            </trans-unit>
+            <trans-unit id="table.tooltip.centrality">
+                <source>Betweenness centrality score: Measures how often this page lies on the shortest path between other pages. High values indicate key connector pages.</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

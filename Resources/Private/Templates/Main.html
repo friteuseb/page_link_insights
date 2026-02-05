@@ -99,7 +99,7 @@
             </f:if>
 
             <!-- Force Diagram -->
-            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 50px); background-color: #1e1e1e; position: relative;">
+            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 150px); background-color: #1e1e1e; position: relative;">
                 <!-- Control Buttons -->
                 <div class="diagram-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
                     <button id="show-notices-btn" class="btn btn-default notices-button" style="display: none; margin-right: 5px;" title="{f:translate(key: 'notices.show.title', extensionName: 'page_link_insights')}">
@@ -298,6 +298,59 @@
                     <f:format.raw>{translations}</f:format.raw>
                 </script>
             </div>
+
+            <!-- Page Metrics Table (Collapsible) -->
+            <f:if condition="{pageMetrics}">
+                <div class="metrics-table-container" id="metrics-table-container">
+                    <div class="metrics-table-header">
+                        <button id="metrics-toggle-btn" class="btn btn-default metrics-toggle-button" type="button">
+                            <core:icon identifier="actions-view-list-collapse" size="small" />
+                            <span class="btn-text" data-translation="tableToggleShow"></span>
+                        </button>
+                    </div>
+                    <div class="metrics-table-content" id="metrics-table-content" style="display: none;">
+                        <h3><span data-translation="tableTitle"></span></h3>
+                        <table id="pagerank-table" class="metrics-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="title" class="sortable"><span data-translation="tableColumnPage"></span> <span class="sort-indicator"></span></th>
+                                    <th data-sort="pagerank" class="sortable sorted-desc">
+                                        <span data-translation="tableColumnPagerank"></span>
+                                        <span class="column-help" data-tooltip-key="tableTooltipPagerank">?</span>
+                                        <span class="sort-indicator"></span>
+                                    </th>
+                                    <th data-sort="inbound" class="sortable">
+                                        <span data-translation="tableColumnInbound"></span>
+                                        <span class="column-help" data-tooltip-key="tableTooltipInbound">?</span>
+                                        <span class="sort-indicator"></span>
+                                    </th>
+                                    <th data-sort="outbound" class="sortable">
+                                        <span data-translation="tableColumnOutbound"></span>
+                                        <span class="column-help" data-tooltip-key="tableTooltipOutbound">?</span>
+                                        <span class="sort-indicator"></span>
+                                    </th>
+                                    <th data-sort="centrality" class="sortable">
+                                        <span data-translation="tableColumnCentrality"></span>
+                                        <span class="column-help" data-tooltip-key="tableTooltipCentrality">?</span>
+                                        <span class="sort-indicator"></span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <f:for each="{pageMetrics}" as="metric">
+                                    <tr data-page-id="{metric.page_uid}" class="metrics-row">
+                                        <td class="page-title">{metric.title}</td>
+                                        <td class="pagerank">{metric.pagerank -> f:format.number(decimals: 6)}</td>
+                                        <td class="inbound">{metric.inbound_links}</td>
+                                        <td class="outbound">{metric.outbound_links}</td>
+                                        <td class="centrality">{metric.centrality_score -> f:format.number(decimals: 4)}</td>
+                                    </tr>
+                                </f:for>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </f:if>
         </div>
     </div>
 </f:section>

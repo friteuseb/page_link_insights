@@ -784,4 +784,13 @@ private function getPageTreeInfo(int $rootPageId): array
         ];
     }
 
+    /**
+     * Get all page UIDs in the subtree
+     */
+    public function getSubtreePageIds(int $pageUid): array
+    {
+        $pages = $this->getPageTreeInfo($pageUid);
+        return array_column($pages, 'uid');
+    }
+
 }

@@ -1121,11 +1121,238 @@ document.addEventListener('DOMContentLoaded', function() {
             window.applyLinkFilters = applyFilters;
         }
 
-        // Initialize all translations, help panel, filters panel, and dismissible alerts
+        // Initialize metrics table functionality
+        function initializeMetricsTable() {
+            const metricsContainer = document.getElementById('metrics-table-container');
+            const metricsContent = document.getElementById('metrics-table-content');
+            const toggleBtn = document.getElementById('metrics-toggle-btn');
+            const table = document.getElementById('pagerank-table');
+
+            if (!metricsContainer || !toggleBtn) return;
+
+            // Initialize column help tooltips with floating tooltip
+            const helpIcons = document.querySelectorAll('.column-help[data-tooltip-key]');
+            let floatingTooltip = null;
+
+            helpIcons.forEach(icon => {
+                const tooltipKey = icon.getAttribute('data-tooltip-key');
+                const tooltipText = translations[tooltipKey] || '';
+
+                icon.addEventListener('mouseenter', function(e) {
+                    if (!tooltipText) return;
+
+                    // Create tooltip if it doesn't exist
+                    if (!floatingTooltip) {
+                        floatingTooltip = document.createElement('div');
+                        floatingTooltip.className = 'column-tooltip';
+                        document.body.appendChild(floatingTooltip);
+                    }
+
+                    floatingTooltip.textContent = tooltipText;
+                    floatingTooltip.style.display = 'block';
+
+                    // Position tooltip below the icon
+                    const rect = icon.getBoundingClientRect();
+                    floatingTooltip.style.left = (rect.left + rect.width / 2 - 140) + 'px';
+                    floatingTooltip.style.top = (rect.bottom + 8) + 'px';
+                });
+
+                icon.addEventListener('mouseleave', function() {
+                    if (floatingTooltip) {
+                        floatingTooltip.style.display = 'none';
+                    }
+                });
+            });
+
+            // Toggle visibility
+            toggleBtn.addEventListener('click', function() {
+                const isVisible = metricsContent.style.display !== 'none';
+                metricsContent.style.display = isVisible ? 'none' : 'block';
+                toggleBtn.classList.toggle('active', !isVisible);
+
+                const btnText = toggleBtn.querySelector('.btn-text');
+                if (btnText) {
+                    btnText.textContent = isVisible
+                        ? (translations.tableToggleShow || 'Show Page Metrics')
+                        : (translations.tableToggleHide || 'Hide Page Metrics');
+                }
+            });
+
+            if (!table) return;
+
+            // Sort state
+            let currentSort = { column: 'pagerank', direction: 'desc' };
+
+            // Sorting functionality
+            const headers = table.querySelectorAll('th.sortable');
+            headers.forEach(header => {
+                header.addEventListener('click', function() {
+                    const sortKey = this.getAttribute('data-sort');
+
+                    // Toggle direction if same column, otherwise default to desc
+                    if (currentSort.column === sortKey) {
+                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.column = sortKey;
+                        currentSort.direction = 'desc';
+                    }
+
+                    // Update header classes
+                    headers.forEach(h => {
+                        h.classList.remove('sorted-asc', 'sorted-desc');
+                    });
+                    this.classList.add(currentSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+
+                    // Sort the table
+                    sortTable(sortKey, currentSort.direction);
+                });
+            });
+
+            function sortTable(column, direction) {
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                const columnMap = {
+                    'title': '.page-title',
+                    'pagerank': '.pagerank',
+                    'inbound': '.inbound',
+                    'outbound': '.outbound',
+                    'centrality': '.centrality'
+                };
+
+                rows.sort((a, b) => {
+                    const aCell = a.querySelector(columnMap[column]);
+                    const bCell = b.querySelector(columnMap[column]);
+
+                    let aVal = aCell ? aCell.textContent.trim() : '';
+                    let bVal = bCell ? bCell.textContent.trim() : '';
+
+                    // For numeric columns, parse as float
+                    if (column !== 'title') {
+                        aVal = parseFloat(aVal) || 0;
+                        bVal = parseFloat(bVal) || 0;
+                    }
+
+                    let comparison = 0;
+                    if (aVal < bVal) comparison = -1;
+                    if (aVal > bVal) comparison = 1;
+
+                    return direction === 'asc' ? comparison : -comparison;
+                });
+
+                // Reorder rows in DOM
+                rows.forEach(row => tbody.appendChild(row));
+            }
+
+            // Row click handler to highlight node in diagram
+            const rows = table.querySelectorAll('tbody tr.metrics-row');
+            rows.forEach(row => {
+                row.addEventListener('click', function() {
+                    const pageId = this.getAttribute('data-page-id');
+
+                    // Remove previous highlight from table
+                    rows.forEach(r => r.classList.remove('highlighted'));
+                    this.classList.add('highlighted');
+
+                    // Highlight node in diagram
+                    highlightNode(pageId);
+                });
+            });
+        }
+
+        // Highlight a node in the diagram
+        function highlightNode(pageId) {
+            // Find the node data
+            const nodeData = diagramData.nodes.find(n => String(n.id) === String(pageId));
+            if (!nodeData) {
+                console.warn('Node not found for page ID:', pageId);
+                return;
+            }
+
+            // Remove previous highlights
+            g.selectAll('.node circle')
+                .classed('highlighted-node', false)
+                .attr('stroke-width', 2);
+
+            // Find and highlight the node
+            const targetNode = g.selectAll('.node')
+                .filter(d => String(d.id) === String(pageId));
+
+            if (!targetNode.empty()) {
+                // Add highlight style
+                targetNode.select('circle')
+                    .classed('highlighted-node', true)
+                    .attr('stroke', '#ffffff')
+                    .attr('stroke-width', 4);
+
+                // Get node position
+                const nodeX = nodeData.x;
+                const nodeY = nodeData.y;
+
+                // Calculate transform to center on node
+                const currentWidth = container.clientWidth;
+                const currentHeight = container.clientHeight;
+                const scale = 1.5; // Zoom in a bit
+
+                const translateX = currentWidth / 2 - nodeX * scale;
+                const translateY = currentHeight / 2 - nodeY * scale;
+
+                // Smooth transition to center on node
+                svg.transition()
+                    .duration(750)
+                    .call(zoom.transform, d3.zoomIdentity.translate(translateX, translateY).scale(scale));
+
+                // Show tooltip for the node
+                let themeHtml = '';
+                if (nodeData.themes && nodeData.themes.length > 0) {
+                    themeHtml = `<br><strong>${translations.themes}</strong><br>`;
+                    nodeData.themes.slice(0, 3).forEach(theme => {
+                        themeHtml += `${theme.theme} (${theme.relevance.toFixed(1)})<br>`;
+                    });
+                }
+
+                tooltip.style("visibility", "visible")
+                    .html(`
+                        <strong>${nodeData.title}</strong><br>
+                        ID: ${nodeData.id}<br>
+                        ${translations.incomingLinks} ${nodeData.incomingLinks}
+                        ${themeHtml}
+                        <em>${translations.ctrlClickToOpen}</em>
+                    `)
+                    .style("top", (currentHeight / 2 + 50) + "px")
+                    .style("left", (currentWidth / 2) + "px");
+
+                // Hide tooltip after 3 seconds
+                setTimeout(() => {
+                    tooltip.style("visibility", "hidden");
+                }, 3000);
+
+                // Add pulse animation
+                targetNode.select('circle')
+                    .transition()
+                    .duration(200)
+                    .attr('r', d => nodeScale(d.incomingLinks) * 1.3)
+                    .transition()
+                    .duration(200)
+                    .attr('r', d => nodeScale(d.incomingLinks))
+                    .transition()
+                    .duration(200)
+                    .attr('r', d => nodeScale(d.incomingLinks) * 1.2)
+                    .transition()
+                    .duration(200)
+                    .attr('r', d => nodeScale(d.incomingLinks));
+            }
+        }
+
+        // Expose highlightNode globally for external use
+        window.highlightDiagramNode = highlightNode;
+
+        // Initialize all translations, help panel, filters panel, dismissible alerts, and metrics table
         initializeTranslations();
         initializeHelpPanel();
         initializeFiltersPanel();
         initializeDismissibleAlerts();
+        initializeMetricsTable();
 
         function drag(simulation) {
             function dragstarted(event) {
