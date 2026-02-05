@@ -77,44 +77,8 @@ class BackendController extends ActionController
         // Check if semantic suggestions should be included (both extension availability and configuration)
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
         
-        // Prepare translations for JavaScript
-        $translations = [
-            'dominantThemes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.dominantThemes'),
-            'linkTypes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.linkTypes'),
-            'themes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.themes'),
-            'standardLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.standardLinks'),
-            'semanticSuggestions' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.semanticSuggestions'),
-            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks'),
-            'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
-            'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
-            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove'),
-            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow'),
-            'statisticsNoData' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.noData'),
-            'statisticsRunAnalysis' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.runAnalysis'),
-            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo'),
-            'helpTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.title'),
-            'helpArrowsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.title'),
-            'helpArrowsDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.description'),
-            'helpColorsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.title'),
-            'helpColorsStandard' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.standard'),
-            'helpColorsSemantic' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.semantic'),
-            'helpColorsBroken' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.broken'),
-            'helpNodesTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.title'),
-            'helpNodesSize' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.size'),
-            'helpNodesColors' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.colors'),
-            'helpInteractionsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.title'),
-            'helpInteractionsDrag' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.drag'),
-            'helpInteractionsZoom' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.zoom'),
-            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover'),
-            'helpInteractionsCtrlClick' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.ctrlclick'),
-            'helpOverviewTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.title'),
-            'helpOverviewDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.description'),
-            'helpLinksTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.links.title'),
-            'noticesShowTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.show.title'),
-            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message'),
-            'fullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fullscreen'),
-            'exitFullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.exitFullscreen')
-        ];
+        // Prepare translations for JavaScript with fallbacks
+        $translations = $this->getTranslationsWithFallbacks();
 
         $view->assignMultiple([
             'data' => json_encode($data),
@@ -157,44 +121,8 @@ class BackendController extends ActionController
         // Check if semantic suggestions should be included (both extension availability and configuration)
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
 
-        // Prepare translations for JavaScript
-        $translations = [
-            'dominantThemes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.dominantThemes'),
-            'linkTypes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.linkTypes'),
-            'themes' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.themes'),
-            'standardLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.standardLinks'),
-            'semanticSuggestions' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.semanticSuggestions'),
-            'brokenLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.legend.brokenLinks'),
-            'incomingLinks' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.incomingLinks'),
-            'ctrlClickToOpen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.ctrlClickToOpen'),
-            'rightClickToRemove' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.tooltip.rightClickToRemove'),
-            'fitToWindow' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fitToWindow'),
-            'statisticsNoData' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.noData'),
-            'statisticsRunAnalysis' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.runAnalysis'),
-            'statisticsSchedulerInfo' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:statistics.notice.schedulerInfo'),
-            'helpTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.title'),
-            'helpArrowsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.title'),
-            'helpArrowsDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.arrows.description'),
-            'helpColorsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.title'),
-            'helpColorsStandard' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.standard'),
-            'helpColorsSemantic' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.semantic'),
-            'helpColorsBroken' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.colors.broken'),
-            'helpNodesTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.title'),
-            'helpNodesSize' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.size'),
-            'helpNodesColors' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.nodes.colors'),
-            'helpInteractionsTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.title'),
-            'helpInteractionsDrag' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.drag'),
-            'helpInteractionsZoom' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.zoom'),
-            'helpInteractionsHover' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.hover'),
-            'helpInteractionsCtrlClick' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.interactions.ctrlclick'),
-            'helpOverviewTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.title'),
-            'helpOverviewDescription' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.overview.description'),
-            'helpLinksTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:help.links.title'),
-            'noticesShowTitle' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.show.title'),
-            'noticesRestoredMessage' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:notices.restored.message'),
-            'fullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.fullscreen'),
-            'exitFullscreen' => $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:diagram.button.exitFullscreen')
-        ];
+        // Prepare translations for JavaScript with fallbacks
+        $translations = $this->getTranslationsWithFallbacks();
 
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $moduleTemplate->assignMultiple([
@@ -332,5 +260,93 @@ class BackendController extends ActionController
         return $GLOBALS['PAGE_LINK_INSIGHTS_DEBUG'] ?? [];
     }
 
+    /**
+     * Get translations with English fallbacks
+     */
+    protected function getTranslationsWithFallbacks(): array
+    {
+        $fallbacks = [
+            'dominantThemes' => 'Dominant Themes',
+            'linkTypes' => 'Link Types',
+            'themes' => 'Themes:',
+            'standardLinks' => 'Standard Links',
+            'semanticSuggestions' => 'Semantic Suggestions',
+            'brokenLinks' => 'Broken Links',
+            'incomingLinks' => 'Incoming links:',
+            'ctrlClickToOpen' => 'Ctrl+Click to open in TYPO3',
+            'rightClickToRemove' => 'Right-click to remove',
+            'fitToWindow' => 'Fit to Window',
+            'statisticsNoData' => 'No statistics available yet',
+            'statisticsRunAnalysis' => 'Run the "Analyze Internal Links" task to generate statistics.',
+            'statisticsSchedulerInfo' => 'Configure this task in the TYPO3 Scheduler for automatic updates.',
+            'helpTitle' => 'Diagram Guide',
+            'helpArrowsTitle' => 'Arrow Directions',
+            'helpArrowsDescription' => 'Arrows point from source pages to target pages.',
+            'helpColorsTitle' => 'Link Colors',
+            'helpColorsStandard' => 'Standard page links from content elements',
+            'helpColorsSemantic' => 'AI-generated semantic suggestions',
+            'helpColorsBroken' => 'Broken links (target page missing)',
+            'helpNodesTitle' => 'Node Information',
+            'helpNodesSize' => 'Node size reflects incoming links count.',
+            'helpNodesColors' => 'Node colors are based on dominant themes.',
+            'helpInteractionsTitle' => 'Interactions',
+            'helpInteractionsDrag' => 'Drag nodes to rearrange',
+            'helpInteractionsZoom' => 'Mouse wheel to zoom, drag to pan',
+            'helpInteractionsHover' => 'Hover for details',
+            'helpInteractionsCtrlClick' => 'Ctrl+Click to open in TYPO3 backend',
+            'helpOverviewTitle' => 'Overview',
+            'helpOverviewDescription' => 'This diagram visualizes page relationships.',
+            'helpLinksTitle' => 'Link Types',
+            'noticesShowTitle' => 'Show dismissed notices',
+            'noticesRestoredMessage' => 'Notices restored',
+            'fullscreen' => 'Fullscreen',
+            'exitFullscreen' => 'Exit Fullscreen',
+        ];
 
+        $translationKeys = [
+            'dominantThemes' => 'diagram.legend.dominantThemes',
+            'linkTypes' => 'diagram.legend.linkTypes',
+            'themes' => 'diagram.tooltip.themes',
+            'standardLinks' => 'diagram.legend.standardLinks',
+            'semanticSuggestions' => 'diagram.legend.semanticSuggestions',
+            'brokenLinks' => 'diagram.legend.brokenLinks',
+            'incomingLinks' => 'diagram.tooltip.incomingLinks',
+            'ctrlClickToOpen' => 'diagram.tooltip.ctrlClickToOpen',
+            'rightClickToRemove' => 'diagram.tooltip.rightClickToRemove',
+            'fitToWindow' => 'diagram.button.fitToWindow',
+            'statisticsNoData' => 'statistics.notice.noData',
+            'statisticsRunAnalysis' => 'statistics.notice.runAnalysis',
+            'statisticsSchedulerInfo' => 'statistics.notice.schedulerInfo',
+            'helpTitle' => 'help.title',
+            'helpArrowsTitle' => 'help.arrows.title',
+            'helpArrowsDescription' => 'help.arrows.description',
+            'helpColorsTitle' => 'help.colors.title',
+            'helpColorsStandard' => 'help.colors.standard',
+            'helpColorsSemantic' => 'help.colors.semantic',
+            'helpColorsBroken' => 'help.colors.broken',
+            'helpNodesTitle' => 'help.nodes.title',
+            'helpNodesSize' => 'help.nodes.size',
+            'helpNodesColors' => 'help.nodes.colors',
+            'helpInteractionsTitle' => 'help.interactions.title',
+            'helpInteractionsDrag' => 'help.interactions.drag',
+            'helpInteractionsZoom' => 'help.interactions.zoom',
+            'helpInteractionsHover' => 'help.interactions.hover',
+            'helpInteractionsCtrlClick' => 'help.interactions.ctrlclick',
+            'helpOverviewTitle' => 'help.overview.title',
+            'helpOverviewDescription' => 'help.overview.description',
+            'helpLinksTitle' => 'help.links.title',
+            'noticesShowTitle' => 'notices.show.title',
+            'noticesRestoredMessage' => 'notices.restored.message',
+            'fullscreen' => 'diagram.button.fullscreen',
+            'exitFullscreen' => 'diagram.button.exitFullscreen',
+        ];
+
+        $translations = [];
+        foreach ($translationKeys as $key => $xliffKey) {
+            $translated = $GLOBALS['LANG']->sL('LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:' . $xliffKey);
+            $translations[$key] = !empty($translated) ? $translated : $fallbacks[$key];
+        }
+
+        return $translations;
+    }
 }
