@@ -331,7 +331,41 @@ class BackendController extends ActionController
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return $result;
+        return $this->normalizeMetrics($result);
+    }
+
+    /**
+     * Normalize pagerank and centrality_score to 0-100 scale using min-max normalization
+     */
+    protected function normalizeMetrics(array $rows): array
+    {
+        if (empty($rows)) {
+            return [];
+        }
+
+        $pagerankValues = array_column($rows, 'pagerank');
+        $centralityValues = array_column($rows, 'centrality_score');
+
+        $prMin = min($pagerankValues);
+        $prMax = max($pagerankValues);
+        $prRange = $prMax - $prMin;
+
+        $cMin = min($centralityValues);
+        $cMax = max($centralityValues);
+        $cRange = $cMax - $cMin;
+
+        foreach ($rows as &$row) {
+            $row['pagerank'] = $prRange > 0
+                ? round(($row['pagerank'] - $prMin) / $prRange * 100, 1)
+                : (count($rows) === 1 ? 100.0 : 0.0);
+
+            $row['centrality_score'] = $cRange > 0
+                ? round(($row['centrality_score'] - $cMin) / $cRange * 100, 1)
+                : (count($rows) === 1 ? 100.0 : 0.0);
+        }
+        unset($row);
+
+        return $rows;
     }
 
     protected function getDebugLog(): array
@@ -388,10 +422,10 @@ class BackendController extends ActionController
             'tableColumnCentrality' => 'Centrality',
             'tableToggleShow' => 'Show Page Metrics',
             'tableToggleHide' => 'Hide Page Metrics',
-            'tableTooltipPagerank' => 'PageRank score (0-1): Measures page importance based on incoming links. Higher values indicate more important pages that receive more links from other pages.',
+            'tableTooltipPagerank' => 'PageRank score (0-100): Measures page importance based on incoming links. 100 = most important page, 0 = least important.',
             'tableTooltipInbound' => 'Number of internal links pointing TO this page from other pages in the site.',
             'tableTooltipOutbound' => 'Number of internal links going FROM this page to other pages in the site.',
-            'tableTooltipCentrality' => 'Betweenness centrality score: Measures how often this page lies on the shortest path between other pages. High values indicate key connector pages.',
+            'tableTooltipCentrality' => 'Centrality score (0-100): Measures how connected this page is relative to others. 100 = most central page, 0 = least central.',
         ];
 
         $translationKeys = [

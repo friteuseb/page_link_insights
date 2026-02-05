@@ -330,10 +330,10 @@
                                 <f:for each="{pageMetrics}" as="metric">
                                     <tr data-page-id="{metric.page_uid}" class="metrics-row">
                                         <td class="page-title">{metric.title}</td>
-                                        <td class="pagerank">{metric.pagerank -> f:format.number(decimals: 6)}</td>
+                                        <td class="pagerank">{metric.pagerank -> f:format.number(decimals: 1)}</td>
                                         <td class="inbound">{metric.inbound_links}</td>
                                         <td class="outbound">{metric.outbound_links}</td>
-                                        <td class="centrality">{metric.centrality_score -> f:format.number(decimals: 4)}</td>
+                                        <td class="centrality">{metric.centrality_score -> f:format.number(decimals: 1)}</td>
                                     </tr>
                                 </f:for>
                             </tbody>
