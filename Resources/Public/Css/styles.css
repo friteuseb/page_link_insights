@@ -1,25 +1,27 @@
 /* Fond sombre pour le module */
 .module {
-    background-color: #1e1e1e; /* Fond sombre */
-    color: #ffffff; /* Texte blanc */
-    margin: 5px; /* Reduced margin for more graph space */
-    border-radius: 8px;
+    background-color: #1e1e1e;
+    color: #ffffff;
+    margin: 0;
+    border-radius: 0;
+    overflow: hidden;
 }
 
 /* Style pour le header du module */
 .module-docheader {
-    background-color: #2d2d2d; /* Fond sombre pour le header */
-    border-bottom: 1px solid #444; /* Bordure subtile */
+    background-color: #2d2d2d;
+    border-bottom: 1px solid #444;
     padding: 10px;
 }
 
-/* Style pour le corps du module */
+/* Style pour le corps du module - un seul ascenseur */
 .module-body {
-    background-color: #1e1e1e; /* Fond sombre pour le corps */
-    color: #ffffff; /* Texte blanc */
-    padding: 8px; /* Reduced padding for more graph space */
-    margin: 5px; /* Reduced margin for more graph space */
-    border-radius: 8px; /* Subtle rounded corners for modern look */
+    background-color: #1e1e1e;
+    color: #ffffff;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    height: calc(100vh - 10px);
 }
 
 /* Style pour les éléments de chargement */
@@ -41,16 +43,16 @@
 
 /* Style pour l'en-tête du module */
 .module-header {
-    margin: 5px; /* Reduced margin for more graph space */
-    padding: 10px; /* Reduced padding for more graph space */
-    background-color: #2d2d2d; /* Subtle background */
-    border-radius: 8px;
+    margin: 0;
+    padding: 6px 12px;
+    background-color: #2d2d2d;
+    border-radius: 0;
 }
 
 /* Compact header styles */
 .compact-header {
-    padding: 8px 15px !important;
-    margin: 5px !important;
+    padding: 6px 12px !important;
+    margin: 0 !important;
 }
 
 .compact-header .header-title-row {
@@ -621,7 +623,7 @@ body.fullscreen-mode .diagram-controls {
 }
 
 .metrics-table-header {
-    padding: 10px 15px;
+    padding: 6px 12px;
     background-color: #2d2d2d;
 }
 
