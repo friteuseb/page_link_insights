@@ -4,8 +4,8 @@
     "description": "A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships and content themes",
     "license": "GPL-2.0-or-later",
     "require": {
-        "typo3/cms-core": "^12.4 || ^13.0",
-        "cywolf/nlp-tools": "^1.2"
+        "typo3/cms-core": "^12.4 || ^13.0 || ^14.0",
+        "cywolf/nlp-tools": "^2.0"
     },
     "autoload": {
         "psr-4": {

@@ -273,8 +273,11 @@ class PageLinkService
      */
     public function shouldIncludeSemanticSuggestions(): bool
     {
-        return \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion')
-            && $this->includeSemanticSuggestions;
+        return $this->includeSemanticSuggestions
+            && (
+                \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion')
+                || \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion_solr')
+            );
     }
 
     private function getMenuSitemapPages(array $pageUids): array
