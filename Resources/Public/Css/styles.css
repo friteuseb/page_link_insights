@@ -769,6 +769,32 @@ body.fullscreen-mode .diagram-controls {
     text-align: center;
 }
 
+.metrics-table td.record-type {
+    text-align: center;
+    width: 70px;
+}
+
+.type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.type-badge--pages {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.type-badge--tx_news_domain_model_news {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
 /* Scrollbar styling for metrics table */
 .metrics-table-content::-webkit-scrollbar {
     width: 8px;

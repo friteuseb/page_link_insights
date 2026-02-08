@@ -8,6 +8,8 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
+use TYPO3\CMS\Core\Site\SiteFinder;
 use Doctrine\DBAL\ParameterType;
 use TYPO3\CMS\Core\Database\Connection;
 
@@ -20,6 +22,7 @@ class PageLinkService
     private bool $includeShortcuts;
     private bool $includeExternalLinks;
     private bool $includeSemanticSuggestions;
+    private bool $includeSolrRecords;
     private bool $useLinkvalidator;
     private ?LinkvalidatorService $linkvalidatorService = null;
 
@@ -38,6 +41,7 @@ class PageLinkService
         $this->includeShortcuts = (bool)($this->extensionConfiguration['includeShortcuts'] ?? false);
         $this->includeExternalLinks = (bool)($this->extensionConfiguration['includeExternalLinks'] ?? false);
         $this->includeSemanticSuggestions = (bool)($this->extensionConfiguration['includeSemanticSuggestions'] ?? true);
+        $this->includeSolrRecords = (bool)($this->extensionConfiguration['includeSolrRecords'] ?? true);
         $this->useLinkvalidator = (bool)($this->extensionConfiguration['useLinkvalidator'] ?? true);
     }
 
@@ -111,53 +115,73 @@ class PageLinkService
             return ['nodes' => [], 'links' => []];
         }
 
-        // Get all content elements and their links from pages in the subtree
         $pageUids = array_column($pages, 'uid');
         $pageUidsString = array_map('strval', $pageUids);
+
+        // Build page nodes with type
+        $nodes = array_values(array_map(fn($page) => [
+            'id' => (string)$page['uid'],
+            'title' => $page['title'],
+            'type' => 'pages',
+        ], $pages));
+
+        // Add news records as nodes (if Solr records enabled)
+        $newsNodeIds = [];
+        if ($this->includeSolrRecords) {
+            $newsRecords = $this->getNewsRecords($pageUids);
+            foreach ($newsRecords as $news) {
+                $nodeId = 'news_' . $news['uid'];
+                $nodes[] = [
+                    'id' => $nodeId,
+                    'title' => $news['title'],
+                    'type' => 'tx_news_domain_model_news',
+                ];
+                $newsNodeIds[] = $nodeId;
+            }
+        }
+
+        // All valid node IDs for filtering
+        $allNodeIds = array_merge($pageUidsString, $newsNodeIds);
 
         // Get direct content links (already filtered by colPos in getContentElementLinks)
         $allLinks = $this->getContentElementLinks($pageUids);
 
         // Filter links to only keep those where BOTH source AND target are in the subtree
-        // This ensures we only see links between pages in the current view
         $allLinks = array_filter($allLinks, function($link) use ($pageUidsString) {
             return in_array($link['sourcePageId'], $pageUidsString, true)
                 && in_array($link['targetPageId'], $pageUidsString, true);
         });
-
-        // Re-index array after filtering
         $allLinks = array_values($allLinks);
 
         // Mark broken links using linkvalidator if available
         $linkvalidatorBrokenLinks = $this->getLinkvalidatorBrokenLinks($pageUids);
 
-        $allLinks = array_map(function($link) use ($pageUidsString, $linkvalidatorBrokenLinks) {
+        $allLinks = array_map(function($link) use ($linkvalidatorBrokenLinks) {
             $sourceId = (int)$link['sourcePageId'];
             $targetId = (int)$link['targetPageId'];
 
-            // Check linkvalidator data if available
-            if (!empty($linkvalidatorBrokenLinks)) {
-                if (isset($linkvalidatorBrokenLinks[$sourceId])) {
-                    foreach ($linkvalidatorBrokenLinks[$sourceId] as $brokenLink) {
-                        if ((int)$brokenLink['targetPageId'] === $targetId) {
-                            $link['broken'] = true;
-                            $link['brokenSource'] = 'linkvalidator';
-                            return $link;
-                        }
+            if (!empty($linkvalidatorBrokenLinks) && isset($linkvalidatorBrokenLinks[$sourceId])) {
+                foreach ($linkvalidatorBrokenLinks[$sourceId] as $brokenLink) {
+                    if ((int)$brokenLink['targetPageId'] === $targetId) {
+                        $link['broken'] = true;
+                        $link['brokenSource'] = 'linkvalidator';
+                        return $link;
                     }
                 }
             }
 
-            // Links are already filtered to subtree, so they're not broken by default
             $link['broken'] = false;
             return $link;
         }, $allLinks);
 
+        // Add Solr MLT links (news ↔ pages/news)
+        if ($this->includeSolrRecords && !empty($newsNodeIds)) {
+            $solrLinks = $this->getSolrMltLinks($pageUid, $nodes, $allNodeIds);
+            $allLinks = array_merge($allLinks, $solrLinks);
+        }
+
         return [
-            'nodes' => array_values(array_map(fn($page) => [
-                'id' => (string)$page['uid'],
-                'title' => $page['title']
-            ], $pages)),
+            'nodes' => $nodes,
             'links' => $allLinks
         ];
     }
@@ -269,15 +293,25 @@ class PageLinkService
     }
 
     /**
-     * Check if semantic suggestions should be included based on both extension availability and configuration
+     * Check if any semantic suggestion extension is available (for UI badge)
      */
     public function shouldIncludeSemanticSuggestions(): bool
     {
         return $this->includeSemanticSuggestions
             && (
-                \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion')
-                || \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('semantic_suggestion_solr')
+                ExtensionManagementUtility::isLoaded('semantic_suggestion')
+                || ExtensionManagementUtility::isLoaded('semantic_suggestion_solr')
             );
+    }
+
+    /**
+     * Check if the DB-based semantic_suggestion extension is available
+     * (as opposed to semantic_suggestion_solr which uses Solr MLT)
+     */
+    private function hasDbSemanticSuggestions(): bool
+    {
+        return $this->includeSemanticSuggestions
+            && ExtensionManagementUtility::isLoaded('semantic_suggestion');
     }
 
     private function getMenuSitemapPages(array $pageUids): array
@@ -509,8 +543,8 @@ private function getPageTreeInfo(int $rootPageId): array
             }
         }
 
-        // Add semantic suggestion links
-        if ($this->shouldIncludeSemanticSuggestions()) {
+        // Add semantic suggestion links (DB-based, from old semantic_suggestion extension)
+        if ($this->hasDbSemanticSuggestions()) {
             $semanticLinks = $this->getSemanticSuggestionLinks($pageUids);
             $links = array_merge($links, $semanticLinks);
         }
@@ -794,6 +828,206 @@ private function getPageTreeInfo(int $rootPageId): array
     {
         $pages = $this->getPageTreeInfo($pageUid);
         return array_column($pages, 'uid');
+    }
+
+    // ---------------------------------------------------------------
+    // Solr records integration (news + MLT links)
+    // ---------------------------------------------------------------
+
+    /**
+     * Get news records whose storage page is in the subtree.
+     * Also looks into system folders (doktype 254) that are children of the subtree pages.
+     */
+    private function getNewsRecords(array $pageUids): array
+    {
+        if (empty($pageUids)) {
+            return [];
+        }
+
+        // Also find sysfolder pages (doktype=254) whose pid is in the subtree
+        // News are typically stored in sysfolders like "News Storage"
+        $storagePids = $this->getStorageFolderIds($pageUids);
+        $allPids = array_unique(array_merge($pageUids, $storagePids));
+
+        // Check if news table exists
+        try {
+            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_news_domain_model_news');
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction());
+
+        if (!$this->includeHidden) {
+            $queryBuilder->getRestrictions()->add(new HiddenRestriction());
+        }
+
+        return $queryBuilder
+            ->select('uid', 'pid', 'title')
+            ->from('tx_news_domain_model_news')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'pid',
+                    $queryBuilder->createNamedParameter($allPids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->eq('sys_language_uid', 0)
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+    }
+
+    /**
+     * Get system folder page UIDs (doktype=254) whose parent is in the given page list.
+     * This finds storage folders like "News Storage" that sit under content pages.
+     */
+    private function getStorageFolderIds(array $parentPageUids): array
+    {
+        if (empty($parentPageUids)) {
+            return [];
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction());
+
+        $rows = $queryBuilder
+            ->select('uid')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'pid',
+                    $queryBuilder->createNamedParameter($parentPageUids, Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->eq('doktype', $queryBuilder->createNamedParameter(254, Connection::PARAM_INT))
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_column($rows, 'uid');
+    }
+
+    /**
+     * Get a Solarium client via EXT:solr ConnectionManager
+     */
+    private function getSolrClient(int $pageUid): ?object
+    {
+        if (!class_exists(\ApacheSolrForTypo3\Solr\ConnectionManager::class)) {
+            return null;
+        }
+
+        try {
+            $siteFinder = GeneralUtility::makeInstance(SiteFinder::class);
+            $site = $siteFinder->getSiteByPageId($pageUid);
+            $rootPageId = $site->getRootPageId();
+
+            $connectionManager = GeneralUtility::makeInstance(
+                \ApacheSolrForTypo3\Solr\ConnectionManager::class
+            );
+            $connection = $connectionManager->getConnectionByRootPageId($rootPageId);
+
+            return $connection->getReadService()->getClient();
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Find a Solr document ID by record type and UID
+     */
+    private function resolveDocId(object $client, string $type, int $uid): ?string
+    {
+        try {
+            $select = $client->createSelect();
+            $select->setQuery(sprintf('type:%s AND uid:%d', $type, $uid));
+            $select->setFields('id');
+            $select->setRows(1);
+
+            $result = $client->select($select);
+            $docs = $result->getDocuments();
+
+            return !empty($docs) ? $docs[0]->id : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get Solr MLT links for news records
+     * Queries Solr's MoreLikeThis handler for each news article
+     * to find related pages and other news articles.
+     */
+    private function getSolrMltLinks(int $pageUid, array $nodes, array $allNodeIds): array
+    {
+        $client = $this->getSolrClient($pageUid);
+        if (!$client) {
+            return [];
+        }
+
+        $links = [];
+        $nodeIdSet = array_flip($allNodeIds);
+
+        // Only query MLT for news nodes (pages already have content links)
+        $newsNodes = array_filter($nodes, fn($n) => $n['type'] === 'tx_news_domain_model_news');
+
+        foreach ($newsNodes as $newsNode) {
+            try {
+                $newsUid = (int)str_replace('news_', '', $newsNode['id']);
+                $docId = $this->resolveDocId($client, 'tx_news_domain_model_news', $newsUid);
+                if (!$docId) {
+                    continue;
+                }
+
+                $mlt = $client->createMoreLikeThis();
+                $mlt->setQuery('id:"' . $docId . '"');
+                $mlt->setMltFields('title,content,keywords');
+                $mlt->setMinimumTermFrequency(2);
+                $mlt->setMinimumDocumentFrequency(2);
+                $mlt->setBoost(true);
+                $mlt->setQueryFields('title^5.0 keywords^3.0 content^0.3');
+                $mlt->setRows(5);
+                $mlt->setFields('id,uid,type,title,score');
+
+                $result = $client->moreLikeThis($mlt);
+
+                foreach ($result as $doc) {
+                    $targetType = $doc->type ?? '';
+                    $targetUid = $doc->uid ?? 0;
+
+                    // Map Solr type+uid to our graph node ID
+                    if ($targetType === 'pages') {
+                        $targetNodeId = (string)$targetUid;
+                    } elseif ($targetType === 'tx_news_domain_model_news') {
+                        $targetNodeId = 'news_' . $targetUid;
+                    } else {
+                        continue;
+                    }
+
+                    // Only add if target exists in our graph and is not self
+                    if (isset($nodeIdSet[$targetNodeId]) && $targetNodeId !== $newsNode['id']) {
+                        $links[] = [
+                            'sourcePageId' => $newsNode['id'],
+                            'targetPageId' => $targetNodeId,
+                            'contentElement' => [
+                                'uid' => 0,
+                                'type' => 'solr_mlt',
+                                'header' => 'Solr MLT',
+                                'colPos' => -1
+                            ],
+                            'similarity' => $doc->score ?? 0,
+                            'isSemantic' => true,
+                            'broken' => false,
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        return $links;
     }
 
 }

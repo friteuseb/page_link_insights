@@ -131,7 +131,12 @@
                                 <label style="display: block; margin-bottom: 8px; cursor: pointer;">
                                     <input type="checkbox" id="filter-semantic" checked style="margin-right: 8px;">
                                     <span style="display: inline-block; width: 12px; height: 12px; background: #9c27b0; margin-right: 5px; vertical-align: middle;"></span>
-                                    Semantic Suggestions
+                                    Semantic (DB)
+                                </label>
+                                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="filter-solr-mlt" checked style="margin-right: 8px;">
+                                    <span style="display: inline-block; width: 12px; height: 12px; background: #06b6d4; margin-right: 5px; vertical-align: middle;"></span>
+                                    Solr MLT
                                 </label>
                                 <label style="display: block; margin-bottom: 8px; cursor: pointer;">
                                     <input type="checkbox" id="filter-broken" checked style="margin-right: 8px;">
@@ -239,6 +244,10 @@
                                 <strong><span data-translation="helpColorsSemantic"></span></strong>
                             </div>
                             <div class="help-color-item">
+                                <span class="help-color-swatch" style="background-color: #06b6d4;"></span>
+                                <strong>Solr MLT (MoreLikeThis)</strong>
+                            </div>
+                            <div class="help-color-item">
                                 <span class="help-color-swatch" style="background-color: #ff0000;"></span>
                                 <strong><span data-translation="helpColorsBroken"></span></strong>
                             </div>
@@ -303,6 +312,7 @@
                         <table id="pagerank-table" class="metrics-table">
                             <thead>
                                 <tr>
+                                    <th data-sort="type" class="sortable"><span data-translation="tableColumnType"></span> <span class="sort-indicator"></span></th>
                                     <th data-sort="title" class="sortable"><span data-translation="tableColumnPage"></span> <span class="sort-indicator"></span></th>
                                     <th data-sort="pagerank" class="sortable sorted-desc">
                                         <span data-translation="tableColumnPagerank"></span>
@@ -329,6 +339,7 @@
                             <tbody>
                                 <f:for each="{pageMetrics}" as="metric">
                                     <tr data-page-id="{metric.page_uid}" class="metrics-row">
+                                        <td class="record-type"><span class="type-badge type-badge--{metric.type}"><f:if condition="{metric.type} == 'pages'"><f:then>Page</f:then><f:else>News</f:else></f:if></span></td>
                                         <td class="page-title">{metric.title}</td>
                                         <td class="pagerank">{metric.pagerank -> f:format.number(decimals: 1)}</td>
                                         <td class="inbound">{metric.inbound_links}</td>

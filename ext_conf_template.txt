@@ -13,5 +13,8 @@ includeShortcuts = 0
 # cat=advanced/enable; type=boolean; label=Include external link pages in diagrams
 includeExternalLinks = 0
 
+# cat=advanced/enable; type=boolean; label=Include Solr-indexed records (news) as nodes with MLT links
+includeSolrRecords = 1
+
 # cat=advanced/enable; type=boolean; label=Use TYPO3 linkvalidator for link detection (if available)
 useLinkvalidator = 1

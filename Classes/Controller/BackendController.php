@@ -12,7 +12,6 @@ use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 use TYPO3\CMS\Fluid\View\StandaloneView;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use Cywolf\PageLinkInsights\Service\PageLinkService;
-use Cywolf\PageLinkInsights\Service\ThemeDataService;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 class BackendController extends ActionController
@@ -25,8 +24,7 @@ class BackendController extends ActionController
         protected readonly ModuleTemplateFactory $moduleTemplateFactory,
         protected readonly PageRenderer $pageRenderer,
         protected readonly ExtensionConfiguration $extensionConfiguration,
-        protected readonly PageLinkService $pageLinkService,
-        protected readonly ThemeDataService $themeDataService
+        protected readonly PageLinkService $pageLinkService
     ) {
         $this->extensionSettings = $this->extensionConfiguration->get('page_link_insights') ?? [];
         $typo3Version = GeneralUtility::makeInstance(Typo3Version::class);
@@ -66,14 +64,10 @@ class BackendController extends ActionController
         // Retrieve the colPos configuration
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
         
-        // Force reloading of theme data by clearing the appropriate cache
-        if ($pageUid > 0) {
-            $this->clearThemeCache($pageUid);
-        }
         // Prepare the data as usual...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
-        $pageMetrics = $pageUid > 0 ? $this->getPageMetrics($pageUid) : [];
+        $pageMetrics = $pageUid > 0 ? $this->getGraphMetrics($data) : [];
 
         // Check if semantic suggestions should be included (both extension availability and configuration)
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
@@ -111,15 +105,10 @@ class BackendController extends ActionController
         // Use the configuration directly initialized in the constructor
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
         
-        // Force reloading of theme data by clearing the appropriate cache
-        if ($pageUid > 0) {
-            $this->clearThemeCache($pageUid);
-        }
-
         // Prepare the data as usual...
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
-        $pageMetrics = $pageUid > 0 ? $this->getPageMetrics($pageUid) : [];
+        $pageMetrics = $pageUid > 0 ? $this->getGraphMetrics($data) : [];
 
         // Check if semantic suggestions should be included (both extension availability and configuration)
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
@@ -150,18 +139,65 @@ class BackendController extends ActionController
         
         try {
             $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
-            
-            // Retrieve the thematic data
-            $themeData = $this->themeDataService->getThemesForSubtree($pageUid);
-            
-            // Enrich the nodes with thematic information
-            $data['nodes'] = $this->themeDataService->enrichNodesWithThemes($data['nodes'], $themeData);
-            
             return $data;
         } catch (\Exception $e) {
             $this->debug('Error getting data: ' . $e->getMessage());
             return ['nodes' => [], 'links' => []];
         }
+    }
+
+    /**
+     * Compute metrics from the live graph data (nodes + links).
+     * Includes both pages and news records.
+     */
+    protected function getGraphMetrics(array $data): array
+    {
+        $nodes = $data['nodes'] ?? [];
+        $links = $data['links'] ?? [];
+
+        if (empty($nodes)) {
+            return [];
+        }
+
+        // Count inbound and outbound per node
+        $inbound = [];
+        $outbound = [];
+        foreach ($nodes as $node) {
+            $inbound[$node['id']] = 0;
+            $outbound[$node['id']] = 0;
+        }
+        foreach ($links as $link) {
+            $src = $link['sourcePageId'] ?? '';
+            $tgt = $link['targetPageId'] ?? '';
+            if (isset($outbound[$src])) {
+                $outbound[$src]++;
+            }
+            if (isset($inbound[$tgt])) {
+                $inbound[$tgt]++;
+            }
+        }
+
+        // Simple PageRank approximation: inbound count normalized 0-100
+        $maxInbound = max(1, max($inbound));
+
+        $rows = [];
+        foreach ($nodes as $node) {
+            $id = $node['id'];
+            $rows[] = [
+                'page_uid' => $id,
+                'title' => $node['title'],
+                'type' => $node['type'] ?? 'pages',
+                'pagerank' => round(($inbound[$id] / $maxInbound) * 100, 1),
+                'inbound_links' => $inbound[$id],
+                'outbound_links' => $outbound[$id],
+                'centrality_score' => round((($inbound[$id] + $outbound[$id]) / max(1, $maxInbound + max(1, max($outbound)))) * 100, 1),
+            ];
+        }
+
+        // Sort by inbound links descending
+        usort($rows, fn($a, $b) => $b['inbound_links'] <=> $a['inbound_links']);
+
+        return $rows;
     }
 
     protected function getPageKPIs(int $pageUid): array
@@ -217,27 +253,6 @@ class BackendController extends ActionController
     {
         parent::initialize();
         $this->debug('Controller initialized');
-    }
-
-    /**
-     * Clears the theme cache for a specific page
-     */
-    protected function clearThemeCache(int $pageUid): void
-    {
-        try {
-            $cacheManager = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Cache\CacheManager::class);
-            $cacheIdentifier = 'themes_' . $pageUid;
-            
-            if ($cacheManager->hasCache('pages')) {
-                $pagesCache = $cacheManager->getCache('pages');
-                if ($pagesCache->has($cacheIdentifier)) {
-                    $pagesCache->remove($cacheIdentifier);
-                    $this->debug('Theme cache cleared for page ' . $pageUid);
-                }
-            }
-        } catch (\Exception $e) {
-            $this->debug('Error deleting theme cache', $e->getMessage());
-        }
     }
 
     protected function debug(string $message, mixed $data = null): void
@@ -379,11 +394,11 @@ class BackendController extends ActionController
     protected function getTranslationsWithFallbacks(): array
     {
         $fallbacks = [
-            'dominantThemes' => 'Dominant Themes',
             'linkTypes' => 'Link Types',
-            'themes' => 'Themes:',
+            'recordTypes' => 'Record Types',
             'standardLinks' => 'Standard Links',
             'semanticSuggestions' => 'Semantic Suggestions',
+            'solrMltLinks' => 'Solr MLT',
             'brokenLinks' => 'Broken Links',
             'incomingLinks' => 'Incoming links:',
             'ctrlClickToOpen' => 'Ctrl+Click to open in TYPO3',
@@ -401,7 +416,7 @@ class BackendController extends ActionController
             'helpColorsBroken' => 'Broken links (target page missing)',
             'helpNodesTitle' => 'Node Information',
             'helpNodesSize' => 'Node size reflects incoming links count.',
-            'helpNodesColors' => 'Node colors are based on dominant themes.',
+            'helpNodesColors' => 'Node colors are based on record type (blue=pages, green=news).',
             'helpInteractionsTitle' => 'Interactions',
             'helpInteractionsDrag' => 'Drag nodes to rearrange',
             'helpInteractionsZoom' => 'Mouse wheel to zoom, drag to pan',
@@ -414,7 +429,8 @@ class BackendController extends ActionController
             'noticesRestoredMessage' => 'Notices restored',
             'fullscreen' => 'Fullscreen',
             'exitFullscreen' => 'Exit Fullscreen',
-            'tableTitle' => 'Page Metrics',
+            'tableTitle' => 'Node Metrics',
+            'tableColumnType' => 'Type',
             'tableColumnPage' => 'Page',
             'tableColumnPagerank' => 'PageRank',
             'tableColumnInbound' => 'Inbound Links',
@@ -429,11 +445,11 @@ class BackendController extends ActionController
         ];
 
         $translationKeys = [
-            'dominantThemes' => 'diagram.legend.dominantThemes',
             'linkTypes' => 'diagram.legend.linkTypes',
-            'themes' => 'diagram.tooltip.themes',
+            'recordTypes' => 'diagram.legend.recordTypes',
             'standardLinks' => 'diagram.legend.standardLinks',
             'semanticSuggestions' => 'diagram.legend.semanticSuggestions',
+            'solrMltLinks' => 'diagram.legend.solrMltLinks',
             'brokenLinks' => 'diagram.legend.brokenLinks',
             'incomingLinks' => 'diagram.tooltip.incomingLinks',
             'ctrlClickToOpen' => 'diagram.tooltip.ctrlClickToOpen',
@@ -465,6 +481,7 @@ class BackendController extends ActionController
             'fullscreen' => 'diagram.button.fullscreen',
             'exitFullscreen' => 'diagram.button.exitFullscreen',
             'tableTitle' => 'table.title',
+            'tableColumnType' => 'table.column.type',
             'tableColumnPage' => 'table.column.page',
             'tableColumnPagerank' => 'table.column.pagerank',
             'tableColumnInbound' => 'table.column.inbound',

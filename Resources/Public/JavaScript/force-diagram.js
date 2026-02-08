@@ -90,17 +90,22 @@ document.addEventListener('DOMContentLoaded', function() {
             .domain([0, maxIncomingLinks])
             .range([minNodeRadius, maxNodeRadius]);
 
-        // Calculer une couleur basée sur le thème principal de la page
-        const themeColorScale = d3.scaleOrdinal()
-            .range(d3.schemeCategory10); // Palette de couleurs prédéfinie
+        // Type-based color scheme
+        const typeColors = {
+            'pages': '#3b82f6',                    // Blue
+            'tx_news_domain_model_news': '#10b981', // Green
+            '_default': '#f59e0b'                   // Orange for other types
+        };
+        function nodeColor(type) {
+            return typeColors[type] || typeColors._default;
+        }
 
-        // Extraire tous les thèmes uniques pour la palette de couleurs
-        const uniqueThemes = Array.from(new Set(
-            diagramData.nodes
-                .filter(node => node.mainTheme && node.mainTheme.name)
-                .map(node => node.mainTheme.name)
-        ));
-        themeColorScale.domain(uniqueThemes);
+        // Collect unique record types present in the graph
+        const uniqueTypes = Array.from(new Set(diagramData.nodes.map(n => n.type || 'pages')));
+        const typeLabels = {
+            'pages': 'Pages',
+            'tx_news_domain_model_news': 'News'
+        };
 
         // Définir les marqueurs pour les flèches
         svg.append("defs").selectAll("marker")
@@ -125,7 +130,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'typolink': '#ffcc00', // Jaune électrique
             'sitemap': '#cc00ff', // Violet électrique
             'text': '#00ffcc', // Cyan clair
-            'semantic_suggestion': '#9c27b0' // Violet pour les liens sémantiques
+            'semantic_suggestion': '#9c27b0', // Violet pour les liens sémantiques (DB)
+            'solr_mlt': '#06b6d4' // Cyan pour les liens Solr MLT
         };
         
         // Filtrer les liens brisés
@@ -186,45 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .force("collide", d3.forceCollide().radius(d => nodeScale(d.incomingLinks) + 10))
             .force("isolatedNodes", forceIsolatedNodes()); // Keep isolated nodes closer
 
-        // Fonction pour créer des clusters basés sur les thèmes
-        function forceCluster() {
-            const strength = 0.15;
-            let nodes;
-
-            // Centres des clusters par thème
-            const centroids = {};
-            
-            function force(alpha) {
-                // Pour chaque nœud
-                for (const d of nodes) {
-                    if (d.mainTheme && d.mainTheme.name) {
-                        const theme = d.mainTheme.name;
-                        
-                        // Si pas encore de centroïde pour ce thème, en créer un
-                        if (!centroids[theme]) {
-                            centroids[theme] = {
-                                x: width/2 + (Math.random() - 0.5) * width/4, 
-                                y: height/2 + (Math.random() - 0.5) * height/4
-                            };
-                        }
-                        
-                        // Attirer le nœud vers le centroïde de son thème
-                        d.vx += (centroids[theme].x - d.x) * strength * alpha;
-                        d.vy += (centroids[theme].y - d.y) * strength * alpha;
-                    }
-                }
-            }
-            
-            force.initialize = (_nodes) => nodes = _nodes;
-            
-            return force;
-        }
-
-        // Ajouter la force de clustering à la simulation si des thèmes sont présents
-        if (uniqueThemes.length > 0) {
-            simulation.force("cluster", forceCluster());
-        }
-
         // Créer les liens
         const link = g.append("g")
             .attr("class", "links")
@@ -233,7 +200,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .join("line")
             .attr("stroke", d => d.broken ? "#ff0000" : linkColors[d.contentElement?.type] || '#999')
             .attr("stroke-width", 2)
-            .attr("stroke-dasharray", d => d.broken ? "5,5" : null)
+            .attr("stroke-dasharray", d => {
+                if (d.broken) return "5,5";
+                const t = d.contentElement?.type;
+                if (t === 'semantic_suggestion' || t === 'solr_mlt') return "8,4";
+                return null;
+            })
             .attr("marker-end", d => d.broken ? null : "url(#end)")
             .on("mouseover", function(event, d) {
                 if (d.broken) {
@@ -247,11 +219,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (d.contentElement?.type === 'semantic_suggestion') {
                     tooltip.style("visibility", "visible")
                         .html(`
-                            <strong>Semantic Suggestion</strong><br>
-                            Source: Page #${d.source.id || d.source}<br>
-                            Target: Page #${d.target.id || d.target}<br>
+                            <strong>Semantic Suggestion (DB)</strong><br>
+                            Source: ${d.source.id || d.source}<br>
+                            Target: ${d.target.id || d.target}<br>
                             ${d.similarity ? `Score: ${(d.similarity * 100).toFixed(1)}%<br>` : ''}
-                            <em>Automatically generated by content analysis</em>
+                            <em>From semantic_suggestion extension</em>
+                        `);
+                } else if (d.contentElement?.type === 'solr_mlt') {
+                    tooltip.style("visibility", "visible")
+                        .html(`
+                            <strong>Solr MLT</strong><br>
+                            Source: ${d.source.id || d.source}<br>
+                            Target: ${d.target.id || d.target}<br>
+                            ${d.similarity ? `Score: ${Number(d.similarity).toFixed(2)}<br>` : ''}
+                            <em>MoreLikeThis similarity via Solr</em>
                         `);
                 }
             })
@@ -275,26 +256,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Style sombre pour le fond et les nœuds
         svg.style("background-color", "#1e1e1e"); // Fond sombre
 
-        // Cercles pour les nœuds avec taille variable et couleurs basées sur les thèmes
+        // Cercles pour les nœuds avec taille variable et couleurs basées sur le type d'enregistrement
         node.append("circle")
             .attr("r", d => nodeScale(d.incomingLinks))
-            .attr("fill", d => {
-                // Si le nœud a un thème principal, utiliser une couleur basée sur ce thème
-                if (d.mainTheme && d.mainTheme.name) {
-                    return themeColorScale(d.mainTheme.name);
-                }
-                // Sinon, utiliser la couleur par défaut
-                return "#003300"; // Vert Matrix foncé
-            })
-            .attr("stroke", d => {
-                // Intensité de la bordure basée sur la pertinence du thème
-                if (d.mainTheme && d.mainTheme.relevance) {
-                    // Plus la pertinence est élevée, plus la bordure est brillante
-                    const brightness = Math.min(255, Math.round(d.mainTheme.relevance * 10));
-                    return `rgb(0, ${brightness}, 0)`;
-                }
-                return "#00ff00"; // Bordure verte fluo par défaut
-            })
+            .attr("fill", d => nodeColor(d.type || 'pages'))
+            .attr("stroke", "#e2e8f0")
             .attr("stroke-width", 2);
 
         // Texte pour les nœuds
@@ -309,23 +275,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Gestion des événements pour les nœuds
         node
             .on("mouseover", function(event, d) {
-                let themeHtml = '';
-                
-                // Ajouter les informations de thème si disponibles
-                if (d.themes && d.themes.length > 0) {
-                    themeHtml = `<br><strong>${translations.themes}</strong><br>`;
-                    d.themes.slice(0, 3).forEach(theme => {
-                        themeHtml += `${theme.theme} (${theme.relevance.toFixed(1)})<br>`;
-                    });
-                }
-                
+                const typeLabel = typeLabels[d.type] || d.type || 'Page';
                 tooltip.style("visibility", "visible")
                     .html(`
                         <strong>${d.title}</strong><br>
-                        ID: ${d.id}<br>
+                        <span style="color:${nodeColor(d.type || 'pages')}">${typeLabel}</span> &mdash; ID: ${d.id}<br>
                         ${translations.incomingLinks} ${d.incomingLinks}
-                        ${themeHtml}
-                        <em>${translations.ctrlClickToOpen}<br>
+                        <br><em>${translations.ctrlClickToOpen}<br>
                         ${translations.rightClickToRemove}</em>
                     `);
             })
@@ -338,10 +294,17 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .on("click", function(event, d) {
                 if (event.ctrlKey || event.metaKey) {
-                    // Récupérer le domaine courant et ouvrir la page dans le module Page de TYPO3
                     const baseUrl = window.location.origin;
-                    const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
-                    window.open(typo3Url, '_blank');
+                    if (d.type === 'tx_news_domain_model_news') {
+                        // Open news record in TYPO3 edit form
+                        const newsUid = d.id.replace('news_', '');
+                        const typo3Url = `${baseUrl}/typo3/record/edit?edit[tx_news_domain_model_news][${newsUid}]=edit`;
+                        window.open(typo3Url, '_blank');
+                    } else {
+                        // Open page in TYPO3 page module
+                        const typo3Url = `${baseUrl}/typo3/module/web/layout?id=${d.id}`;
+                        window.open(typo3Url, '_blank');
+                    }
                 }
             })
             .on("contextmenu", function(event, d) {
@@ -388,55 +351,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log("Liens après suppression:", d3Links);
             });
 
-        // Ajouter une légende pour les thèmes si des thèmes sont présents
-        if (uniqueThemes.length > 0) {
-            // Responsive positioning for themes legend
-            const legendWidth = 180; // Estimated legend width
-            const padding = 20; // Minimum padding from edge
+        // Légende des types d'enregistrements
+        if (uniqueTypes.length > 0) {
+            const legendWidth = 180;
+            const padding = 20;
             let legendX = Math.max(padding, width - legendWidth - padding);
-
-            // On smaller screens, position vertically
             if (width < 768) {
                 legendX = padding;
             }
 
             const legend = svg.append("g")
-                .attr("class", "legend themes-legend")
+                .attr("class", "legend types-legend")
                 .attr("transform", `translate(${legendX}, 30)`);
 
-            // Titre de la légende
             legend.append("text")
                 .attr("x", 0)
                 .attr("y", -10)
                 .attr("fill", "#00ff00")
-                .text(translations.dominantThemes);
+                .text(translations.recordTypes || 'Record Types');
 
-            // Éléments de la légende
-            uniqueThemes.forEach((theme, i) => {
+            uniqueTypes.forEach((type, i) => {
                 const legendItem = legend.append("g")
                     .attr("transform", `translate(0, ${i * 25})`);
-                    
-                legendItem.append("rect")
-                    .attr("width", 20)
-                    .attr("height", 20)
-                    .attr("fill", themeColorScale(theme));
-                    
+
+                legendItem.append("circle")
+                    .attr("cx", 10)
+                    .attr("cy", 10)
+                    .attr("r", 8)
+                    .attr("fill", nodeColor(type))
+                    .attr("stroke", "#e2e8f0")
+                    .attr("stroke-width", 1);
+
                 legendItem.append("text")
                     .attr("x", 30)
                     .attr("y", 15)
                     .attr("fill", "#00ff00")
-                    .text(theme);
+                    .text(typeLabels[type] || type);
             });
         }
 
         // Ajouter une légende pour les types de liens
-            // Responsive positioning for link types legend
             let linkLegendY = 30;
 
-            // On smaller screens, position link legend below theme legend if it exists
-            if (width < 768 && uniqueThemes.length > 0) {
-                const themeItemsHeight = uniqueThemes.length * 25;
-                linkLegendY = 60 + themeItemsHeight; // Below theme legend with some spacing
+            if (width < 768 && uniqueTypes.length > 0) {
+                const typesHeight = uniqueTypes.length * 25;
+                linkLegendY = 60 + typesHeight;
             }
 
             const linkLegend = svg.append("g")
@@ -454,6 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const linkTypes = [
                 { type: "standard", color: "#999", dash: null, label: translations.standardLinks },
                 { type: "semantic", color: "#9c27b0", dash: "8,4", label: translations.semanticSuggestions },
+                { type: "solr_mlt", color: "#06b6d4", dash: "8,4", label: translations.solrMltLinks || 'Solr MLT' },
                 { type: "broken", color: "#ff0000", dash: "5,5", label: translations.brokenLinks }
             ];
 
@@ -494,6 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const filterMap = {
                     'standard': 'filter-standard',
                     'semantic': 'filter-semantic',
+                    'solr_mlt': 'filter-solr-mlt',
                     'broken': 'filter-broken'
                 };
 
@@ -541,30 +502,26 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateLegendsPosition() {
             const currentWidth = container.clientWidth;
 
-            // Update themes legend position
-            const themesLegend = svg.select('.themes-legend');
-            if (!themesLegend.empty()) {
+            // Update types legend position
+            const typesLegend = svg.select('.types-legend');
+            if (!typesLegend.empty()) {
                 const legendWidth = 180;
                 const padding = 20;
                 let legendX = Math.max(padding, currentWidth - legendWidth - padding);
-
                 if (currentWidth < 768) {
                     legendX = padding;
                 }
-
-                themesLegend.attr("transform", `translate(${legendX}, 30)`);
+                typesLegend.attr("transform", `translate(${legendX}, 30)`);
             }
 
             // Update link legend position
             const linkLegend = svg.select('.link-legend');
             if (!linkLegend.empty()) {
                 let linkLegendY = 30;
-
-                if (currentWidth < 768 && uniqueThemes.length > 0) {
-                    const themeItemsHeight = uniqueThemes.length * 25;
-                    linkLegendY = 60 + themeItemsHeight;
+                if (currentWidth < 768 && uniqueTypes.length > 0) {
+                    const typesHeight = uniqueTypes.length * 25;
+                    linkLegendY = 60 + typesHeight;
                 }
-
                 linkLegend.attr("transform", `translate(20, ${linkLegendY})`);
             }
         }
@@ -906,6 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const filterState = {
                 standard: true,
                 semantic: true,
+                solr_mlt: true,
                 broken: true,
                 menu: true,
                 html: true,
@@ -945,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectAllButton.addEventListener('click', function() {
                     Object.keys(filterState).forEach(key => {
                         filterState[key] = true;
-                        const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
+                        const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').replace(/_/g, '-').toLowerCase()}`);
                         if (checkbox) checkbox.checked = true;
                     });
                     applyFilters();
@@ -957,7 +915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 deselectAllButton.addEventListener('click', function() {
                     Object.keys(filterState).forEach(key => {
                         filterState[key] = false;
-                        const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
+                        const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').replace(/_/g, '-').toLowerCase()}`);
                         if (checkbox) checkbox.checked = false;
                     });
                     applyFilters();
@@ -967,7 +925,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Individual filter checkboxes
             Object.keys(filterState).forEach(key => {
                 if (key === 'maxDepth' || key === 'depthFromRoot') return; // Handle these separately
-                const checkboxId = `filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+                const checkboxId = `filter-${key.replace(/([A-Z])/g, '-$1').replace(/_/g, '-').toLowerCase()}`;
                 const checkbox = document.getElementById(checkboxId);
                 if (checkbox) {
                     checkbox.addEventListener('change', function() {
@@ -1004,9 +962,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     return filterState.broken;
                 }
 
-                // Handle semantic suggestions
+                // Handle semantic suggestions (DB-based)
                 if (linkData.contentElement?.type === 'semantic_suggestion') {
                     return filterState.semantic;
+                }
+
+                // Handle Solr MLT links
+                if (linkData.contentElement?.type === 'solr_mlt') {
+                    return filterState.solr_mlt;
                 }
 
                 // Handle specific link types based on content element type
@@ -1213,6 +1176,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const rows = Array.from(tbody.querySelectorAll('tr'));
 
                 const columnMap = {
+                    'type': '.record-type',
                     'title': '.page-title',
                     'pagerank': '.pagerank',
                     'inbound': '.inbound',
@@ -1228,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     let bVal = bCell ? bCell.textContent.trim() : '';
 
                     // For numeric columns, parse as float
-                    if (column !== 'title') {
+                    if (column !== 'title' && column !== 'type') {
                         aVal = parseFloat(aVal) || 0;
                         bVal = parseFloat(bVal) || 0;
                     }
@@ -1303,21 +1267,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     .call(zoom.transform, d3.zoomIdentity.translate(translateX, translateY).scale(scale));
 
                 // Show tooltip for the node
-                let themeHtml = '';
-                if (nodeData.themes && nodeData.themes.length > 0) {
-                    themeHtml = `<br><strong>${translations.themes}</strong><br>`;
-                    nodeData.themes.slice(0, 3).forEach(theme => {
-                        themeHtml += `${theme.theme} (${theme.relevance.toFixed(1)})<br>`;
-                    });
-                }
-
+                const nodeTypeLabel = typeLabels[nodeData.type] || nodeData.type || 'Page';
                 tooltip.style("visibility", "visible")
                     .html(`
                         <strong>${nodeData.title}</strong><br>
-                        ID: ${nodeData.id}<br>
+                        <span style="color:${nodeColor(nodeData.type || 'pages')}">${nodeTypeLabel}</span> &mdash; ID: ${nodeData.id}<br>
                         ${translations.incomingLinks} ${nodeData.incomingLinks}
-                        ${themeHtml}
-                        <em>${translations.ctrlClickToOpen}</em>
+                        <br><em>${translations.ctrlClickToOpen}</em>
                     `)
                     .style("top", (currentHeight / 2 + 50) + "px")
                     .style("left", (currentWidth / 2) + "px");

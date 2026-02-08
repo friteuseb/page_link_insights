@@ -16,7 +16,6 @@ services:
       $pageRenderer: '@TYPO3\CMS\Core\Page\PageRenderer'
       $extensionConfiguration: '@TYPO3\CMS\Core\Configuration\ExtensionConfiguration'
       $pageLinkService: '@Cywolf\PageLinkInsights\Service\PageLinkService'
-      $themeDataService: '@Cywolf\PageLinkInsights\Service\ThemeDataService'
     
   Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
@@ -35,9 +34,6 @@ services:
         title: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.title'
         description: 'LLL:EXT:page_link_insights/Resources/Private/Language/locallang.xlf:task.analyzeLinks.description'
   
-  Cywolf\PageLinkInsights\Service\ThemeDataService:
-    public: true
-
   Cywolf\PageLinkInsights\Service\LinkvalidatorService:
     public: true
 
