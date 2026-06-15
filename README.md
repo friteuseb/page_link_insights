@@ -183,6 +183,7 @@ For search functionality enhancement, see [README_SOLR.md](README_SOLR.md).
 - **Theme Analysis Errors**: Verify NlpTools extension is installed
 - **Linkvalidator Not Working**: Ensure cms-linkvalidator scheduler task has been run at least once
 - **Semantic Suggestions Missing**: Install and configure the semantic_suggestion extension
+- **Database Analyzer Loop**: The Database Analyzer (*Admin Tools → Maintenance → Analyze Database*) may keep suggesting the same `ALTER TABLE ... DOUBLE PRECISION` statements for the `weight`/`relevance` columns even after executing them. The cause was a default-value mismatch (`'0.00'` in the schema vs `'0'` stored by MySQL 8.x / MariaDB). This is fixed from this version onwards: the affected columns now use `DEFAULT '0'`, matching the value the database actually stores and the other `DOUBLE PRECISION` columns in the extension. If you upgraded an existing installation, run the Database Analyzer **once** to align your schema; the suggestion will then stop reappearing. See [issue #22](https://github.com/friteuseb/page_link_insights/issues/22).
 
 ## Support and Contribution
 
