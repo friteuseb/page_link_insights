@@ -75,7 +75,7 @@ CREATE TABLE tx_pagelinkinsights_keywords (
     page_uid int(11) DEFAULT '0' NOT NULL,
     keyword varchar(255) DEFAULT '' NOT NULL,
     frequency int(11) DEFAULT '0' NOT NULL,
-    weight DOUBLE PRECISION DEFAULT '0.00' NOT NULL,
+    weight DOUBLE PRECISION DEFAULT '0' NOT NULL,
     language int(11) DEFAULT '0' NOT NULL,
     content_type varchar(50) DEFAULT '' NOT NULL, 
     
@@ -94,7 +94,7 @@ CREATE TABLE tx_pagelinkinsights_themes (
     
     theme_name varchar(255) DEFAULT '' NOT NULL,
     keywords text,
-    weight DOUBLE PRECISION DEFAULT '0.00' NOT NULL,
+    weight DOUBLE PRECISION DEFAULT '0' NOT NULL,
     language int(11) DEFAULT '0' NOT NULL,
     
     PRIMARY KEY (uid),
@@ -111,7 +111,7 @@ CREATE TABLE tx_pagelinkinsights_page_themes (
     
     page_uid int(11) DEFAULT '0' NOT NULL,
     theme_uid int(11) DEFAULT '0' NOT NULL,
-    relevance DOUBLE PRECISION DEFAULT '0.00' NOT NULL,
+    relevance DOUBLE PRECISION DEFAULT '0' NOT NULL,
     
     PRIMARY KEY (uid),
     KEY parent (pid),
