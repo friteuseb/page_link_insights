@@ -21,6 +21,7 @@ class PageLinkService
     private bool $includeHidden;
     private bool $includeShortcuts;
     private bool $includeExternalLinks;
+    private bool $includeSysFolders;
     private bool $includeSemanticSuggestions;
     private bool $includeSolrRecords;
     private bool $useLinkvalidator;
@@ -40,6 +41,7 @@ class PageLinkService
         $this->includeHidden = (bool)($this->extensionConfiguration['includeHidden'] ?? false);
         $this->includeShortcuts = (bool)($this->extensionConfiguration['includeShortcuts'] ?? false);
         $this->includeExternalLinks = (bool)($this->extensionConfiguration['includeExternalLinks'] ?? false);
+        $this->includeSysFolders = (bool)($this->extensionConfiguration['includeSysFolders'] ?? false);
         $this->includeSemanticSuggestions = (bool)($this->extensionConfiguration['includeSemanticSuggestions'] ?? true);
         $this->includeSolrRecords = (bool)($this->extensionConfiguration['includeSolrRecords'] ?? true);
         $this->useLinkvalidator = (bool)($this->extensionConfiguration['useLinkvalidator'] ?? true);
@@ -48,12 +50,15 @@ class PageLinkService
     private function getExcludedDokTypes(): array
     {
         $excludedDokTypes = [
-            254, // System folders
             255, // Recycler (legacy)
             199  // Menu separators - always exclude as they don't serve content
         ];
 
-        // Conditionally exclude shortcuts and external links
+        // Conditionally exclude system folders, shortcuts and external links
+        if (!$this->includeSysFolders) {
+            $excludedDokTypes[] = 254; // System folders
+        }
+
         if (!$this->includeShortcuts) {
             $excludedDokTypes[] = 4; // Shortcuts
         }
