@@ -13,6 +13,9 @@ includeShortcuts = 0
 # cat=advanced/enable; type=boolean; label=Include external link pages in diagrams
 includeExternalLinks = 0
 
+# cat=advanced/enable; type=boolean; label=Include system folders (doktype 254) as nodes in diagrams
+includeSysFolders = 0
+
 # cat=advanced/enable; type=boolean; label=Include Solr-indexed records (news) as nodes with MLT links
 includeSolrRecords = 1
 

@@ -89,6 +89,8 @@ The extension can be configured through the Extension Configuration in TYPO3 Bac
 |--------|---------|-------------|
 | `includeShortcuts` | `false` | Include shortcut pages (doktype 4) in diagrams |
 | `includeExternalLinks` | `false` | Include external link pages (doktype 3) in diagrams |
+| `includeSysFolders` | `false` | Include system folders (doktype 254) as nodes in diagrams. Enable this when sys-folders are used as menu entry points |
+| `includeSolrRecords` | `true` | Include Solr-indexed records (e.g. news) as nodes with More-Like-This links |
 | `useLinkvalidator` | `true` | Use TYPO3 linkvalidator for broken link detection (if available) |
 
 > **Note**: The `useLinkvalidator` option provides more accurate broken link detection when cms-linkvalidator is installed and its scheduler task has been run. If linkvalidator is not available, the extension falls back to checking if target pages exist in the database.
