@@ -95,15 +95,27 @@ The extension can be configured through the Extension Configuration in TYPO3 Bac
 
 ### Scheduler Task
 
-To set up automatic link analysis:
+The analysis can be run either **manually** or on a **recurring schedule** — there is no single "right" frequency.
+
+To set it up:
 
 1. Go to Scheduler module
 2. Add a new task
 3. Select "Analyze Page Links and Themes"
 4. Configure the root page ID
-5. Set your preferred frequency
+5. Choose how the task should run (see below)
 
 ![Scheduler Task](Resources/Public/Images/scheduler_task.png)
+
+#### How often should it run?
+
+The task simply recomputes the link/theme metrics for the configured subtree. Once it has run, the results stay available in the Page Link Insights backend module until the next run. So the frequency only depends on **how often your link structure changes** and how fresh you need the metrics to be:
+
+- **Run it manually** (recommended for most users): just execute the task once whenever you want up-to-date metrics — typically right before reviewing your internal linking. No recurring schedule needed.
+- **Daily / weekly**: useful if editors frequently add or restructure content and you want the metrics kept current automatically, without thinking about it. Daily is plenty for most editorial sites.
+- **More frequently (e.g. hourly)** only makes sense on sites with constant content changes where you actively monitor linking in near-real-time.
+
+> **Avoid very short intervals (e.g. every minute).** The task scans the whole subtree (pages, content elements, and optionally linkvalidator/Solr data) and writes the results to the database. Running it that often wastes resources for no practical benefit, since the analysis rarely changes between runs. Match the frequency to your editorial rhythm instead.
 
 
 ## Usage
