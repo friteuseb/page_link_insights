@@ -1,6 +1,6 @@
 {
     "name": "cywolf/page_link_insights",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "type": "typo3-cms-extension",
     "description": "A TYPO3 extension that adds a backend module with a D3.js force diagram visualization for understanding page relationships and content themes",
     "license": "GPL-2.0-or-later",
