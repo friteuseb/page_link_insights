@@ -1,9 +1,23 @@
+/* Le module occupe toute la zone de contenu du backend, et le diagramme prend
+   tout ce qui reste sous l'en-tete. Sans cette chaine de hauteurs, le conteneur
+   du diagramme retombait sur une hauteur figee (100vh moins une constante) qui
+   ignorait ce qui le precede : il debordait sous la ligne de flottaison et la
+   page defilait au lieu de s'ajuster. */
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
 /* Fond sombre pour le module */
 .module {
     background-color: #1e1e1e; /* Fond sombre */
     color: #ffffff; /* Texte blanc */
-    margin: 15px; /* Add outer margin for proper spacing */
-    border-radius: 8px;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
 /* Style pour le header du module */
@@ -13,13 +27,36 @@
     padding: 10px;
 }
 
-/* Style pour le corps du module */
-.module-body {
+/* Style pour le corps du module.
+   Selecteur descendant volontaire : le backend applique un padding de 24px sur
+   .module-body, qui rognait la zone utile de 48px dans chaque dimension. */
+.module > .module-body {
     background-color: #1e1e1e; /* Fond sombre pour le corps */
     color: #ffffff; /* Texte blanc */
-    padding: 20px; /* Increased padding for better spacing */
-    margin: 15px; /* Add margin to prevent "broken" appearance */
-    border-radius: 8px; /* Subtle rounded corners for modern look */
+    padding: 8px;
+    margin: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0; /* sinon le contenu impose sa hauteur et le flex ne compresse rien */
+}
+
+/* Bandeau de KPI et notices : hauteur naturelle, jamais etiree */
+.module-body > .panel,
+.module-body > .alert {
+    flex: 0 0 auto;
+    margin-bottom: 6px;
+}
+
+/* Le diagramme absorbe tout l'espace restant.
+   overflow:hidden car un graphe de forces s'etend au-dela de son viewBox : sans
+   rognage, ce debordement allongeait le document et faisait defiler la page au
+   lieu de laisser le zoom et "Fit to Window" faire leur travail. */
+#force-diagram-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* Style pour les éléments de chargement */
@@ -39,12 +76,36 @@
     pointer-events: none; /* Empêche le tooltip de bloquer les interactions */
 }
 
-/* Style pour l'en-tête du module */
+/* Style pour l'en-tête du module : compact, c'est le diagramme qui doit
+   occuper la place, pas le titre. */
 .module-header {
-    margin: 15px; /* Add consistent spacing */
-    padding: 15px;
+    flex: 0 0 auto;
+    margin: 0 0 6px 0;
+    padding: 6px 10px;
     background-color: #2d2d2d; /* Subtle background */
-    border-radius: 8px;
+    border-radius: 4px;
+}
+
+.module-header h1 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+.module-header h1 small {
+    font-size: 12px;
+    opacity: 0.75;
+    margin-left: 8px;
+}
+
+/* Les bandeaux d'information ne doivent pas repousser le diagramme */
+.module-header .alert {
+    margin-bottom: 6px;
+    padding: 6px 10px;
+}
+
+.module-header .alert:last-child {
+    margin-bottom: 0;
 }
 
 /* Responsive styles for diagram legends */
@@ -60,21 +121,12 @@
     .link-legend text {
         font-size: 11px; /* Slightly smaller text on mobile */
     }
-
-    #force-diagram-container {
-        height: calc(100vh - 100px) !important; /* More space for legends on mobile */
-    }
 }
 
 @media (max-width: 480px) {
     .legend text,
     .link-legend text {
         font-size: 10px; /* Even smaller on very small screens */
-    }
-
-    /* Ensure legends don't overlap with diagram content */
-    #force-diagram-container {
-        height: calc(100vh - 120px) !important;
     }
 }
 

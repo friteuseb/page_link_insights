@@ -8,28 +8,16 @@
             .t3js-module-docheader {
                 display: none !important;
             }
-            
-            #force-diagram-container {
-                height: calc(100vh - 60px) !important;
-            }
-            
-            .module-body {
-                /* Removed conflicting margin/padding styles - now handled by CSS file */
-            }
         </style>
 
         <div class="module-header">
-            <h1>
+            <h1 title="{f:translate(key: 'module.description')}">
                 <f:translate key="module.title">Page Link Insights</f:translate>
                 <small>
                     <f:translate key="module.subtitle">Interactive visualization of page relationships</f:translate>
                 </small>
             </h1>
-            
-            <p class="lead">
-                <f:translate key="module.description">Explore how your pages connect through content links and references.</f:translate>
-            </p>
-            
+
             <!-- L'index de références est la source du diagramme : vide, rien ne peut s'afficher -->
             <f:if condition="{referenceIndexPopulated} == 0">
                 <div class="alert alert-warning" id="refindex-empty-alert">
@@ -97,8 +85,8 @@
         </div>
 
 
-    <div class="module">
-        <div class="module-body">
+        <!-- Pas de .module/.module-body ici : le layout en fournit déjà un, et les
+             emboîter doublait marges et paddings au détriment du diagramme. -->
             <!-- Compact Site Analytics -->
             <f:if condition="{kpis}">
                 <f:if condition="{kpis.hasStatistics}">
@@ -149,7 +137,7 @@
             </f:if>
 
             <!-- Force Diagram -->
-            <div id="force-diagram-container" class="h-full w-full" style="height: calc(100vh - 80px); background-color: #1e1e1e; position: relative;">
+            <div id="force-diagram-container" class="h-full w-full" style="background-color: #1e1e1e; position: relative;">
                 <!-- Control Buttons -->
                 <div class="diagram-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000;">
                     <button id="show-notices-btn" class="btn btn-default notices-button" style="display: none; margin-right: 5px;" title="{f:translate(key: 'notices.show.title')}">
@@ -345,6 +333,4 @@
                     <f:format.raw>{translations}</f:format.raw>
                 </script>
             </div>
-        </div>
-    </div>
 </f:section>

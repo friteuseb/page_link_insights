@@ -409,9 +409,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 legendX = padding;
             }
 
+            // 60px sous le bord : les boutons de contrôle occupent le coin
+            // supérieur droit et masquaient le titre de la légende.
             const legend = svg.append("g")
                 .attr("class", "legend themes-legend")
-                .attr("transform", `translate(${legendX}, 30)`);
+                .attr("transform", `translate(${legendX}, 60)`);
 
             // Titre de la légende
             legend.append("text")
@@ -561,7 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     legendX = padding;
                 }
 
-                themesLegend.attr("transform", `translate(${legendX}, 30)`);
+                themesLegend.attr("transform", `translate(${legendX}, 60)`);
             }
 
             // Update link legend position
@@ -571,15 +573,46 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (currentWidth < 768 && uniqueThemes.length > 0) {
                     const themeItemsHeight = uniqueThemes.length * 25;
-                    linkLegendY = 60 + themeItemsHeight;
+                    linkLegendY = 90 + themeItemsHeight;
                 }
 
                 linkLegend.attr("transform", `translate(20, ${linkLegendY})`);
             }
         }
 
+        // Le viewBox n'était calculé qu'au démarrage : agrandir la fenêtre
+        // étirait le dessin au lieu de révéler davantage de surface. On le
+        // recale sur les dimensions réelles du conteneur à chaque redimensionnement.
+        function updateViewBox() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            if (w > 0 && h > 0) {
+                svg.attr("viewBox", [0, 0, w, h]);
+                simulation.force("center", d3.forceCenter(w / 2, h / 2));
+                simulation.alpha(0.1).restart();
+            }
+        }
+
         // Listen for window resize events
         window.addEventListener('resize', () => {
+            updateViewBox();
+            updateLegendsPosition();
+        });
+
+        // Le conteneur est en flex : sa taille change aussi sans que la fenêtre
+        // bouge (bandeau masqué, panneau ouvert). ResizeObserver couvre ces cas.
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => {
+                updateViewBox();
+                updateLegendsPosition();
+            }).observe(container);
+        }
+
+        // Le module s'affiche dans l'iframe du backend, dont la mise en page se
+        // stabilise après l'exécution de ce script : les dimensions lues à
+        // l'initialisation sont provisoires. On recale une fois le calque posé.
+        requestAnimationFrame(() => {
+            updateViewBox();
             updateLegendsPosition();
         });
 
