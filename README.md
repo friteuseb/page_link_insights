@@ -2,7 +2,7 @@
 
 ![Force Diagram Example](Resources/Public/Images/force-diagram-example.png)
 
-This TYPO3 extension helps you optimize your website's internal linking structure by providing a powerful visual representation of content-based page connections. Page Link Insights focuses specifically on links within your content elements, helping you understand and improve your site's semantic link structure and SEO performance.
+This TYPO3 extension helps you optimize your website's internal linking structure by drawing every internal link the CMS knows about as an interactive diagram. Links are read from the TYPO3 reference index, so the picture covers rich text, header links, FlexForm values, page shortcuts and link fields declared by other extensions — not just the body text of content elements. The analysis runs one language at a time.
 
 ## Features
 
@@ -102,7 +102,7 @@ The extension can be configured through the Extension Configuration in TYPO3 Bac
 1. Go to Admin Tools > Settings > Extension Configuration
 2. Select "page_link_insights"
 3. Configure the following options:
-   - `colPosToAnalyze`: Comma-separated list of content column positions to analyze (default: 0)
+   - `colPosToAnalyze`: Comma-separated list of content column positions to analyze (default: `0,2`)
    - `includeHidden`: Whether to include hidden pages and content elements (default: false)
    - `includeShortcuts`: Include shortcut pages (doktype 4) as nodes in diagrams (default: false)
    - `includeExternalLinks`: Include external link pages (doktype 3) as nodes in diagrams (default: false)
@@ -143,8 +143,19 @@ The task simply recomputes the link/theme metrics for the configured subtree. On
 4. Explore the force diagram visualization:
    - Larger nodes indicate pages with more incoming links
    - Colors represent different link types
-   - Dashed red lines indicate broken links
+   - Dashed red lines indicate broken links, drawn towards a red dashed
+     placeholder node standing for the page that no longer exists
    - Hover over elements for detailed information
+
+### Switching Language
+
+Sites with more than one language show a selector in the module header. It
+changes the whole analysis, not just the labels: links come from content
+elements in the selected language, page titles use the translation where one
+exists, and keywords, themes and the statistics strip follow it too.
+
+Pages left untranslated stay in the diagram with their original title and show
+up in the orphaned count, which makes gaps in translation coverage visible.
 
 ### Interactive Features
 
@@ -167,11 +178,16 @@ Pages with similar content will be grouped together and colored according to the
 
 #### NLP Support
 
-- If the `cywolf/nlp-tools` extension is installed, it will be used for advanced linguistic analysis
-- If this extension is not available or encounters errors, a fallback method is automatically used
-- In all cases, relevant themes will be generated for your pages
+`cywolf/nlp-tools` is a required dependency, not an option: it provides the
+tokenizer, the stemmer and the stop word lists. A simplified fallback still
+exists for the case where the analysis throws, so a failure degrades the theme
+quality rather than breaking the module.
 
-The clustering visualization works in both TYPO3 v12 and v13, and is compatible with PHP 8.1 and 8.2.
+The stop word list is selected from the language declared for the site in the
+site configuration, not from a guess made against the text. Terms are then
+ranked by TF-IDF across the analysed subtree, and any term carried by more than
+half of its pages is discarded as vocabulary rather than subject matter.
+
 
 ### Solr Integration
 
@@ -182,7 +198,10 @@ For search functionality enhancement, see [README_SOLR.md](README_SOLR.md).
 - **Empty Visualization**: Build the reference index first
   (`vendor/bin/typo3 referenceindex:update`); the module displays a warning when
   it is empty. Then check that the selected page has content with page references
-- **Missing Links**: Check if links are in the analyzed column positions
+- **Missing Links**: Links are read from the reference index. If a link was
+  added outside the TYPO3 backend, or the index is stale, run
+  `vendor/bin/typo3 referenceindex:update`. Also check that the link sits in one
+  of the analyzed column positions
 - **Performance Issues**: Large sites may need higher PHP memory limits
 - **Theme Analysis Errors**: Verify NlpTools extension is installed
 
