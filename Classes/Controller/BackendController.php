@@ -18,7 +18,12 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 class BackendController extends ActionController
 {
     protected array $extensionSettings;
-    protected bool $debugMode = true;
+
+    /**
+     * Collects diagnostic entries in $GLOBALS for local debugging. Off in
+     * releases: nothing reads the collected data at runtime.
+     */
+    protected bool $debugMode = false;
 
     public function __construct(
         protected readonly ModuleTemplateFactory $moduleTemplateFactory,
