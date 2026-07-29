@@ -32,7 +32,7 @@ CREATE TABLE tx_pagelinkinsights_linkanalysis (
     source_page int(11) DEFAULT '0' NOT NULL,
     target_page int(11) DEFAULT '0' NOT NULL,
     content_element int(11) DEFAULT '0' NOT NULL,
-    link_type varchar(32) DEFAULT '' NOT NULL,
+    link_type varchar(64) DEFAULT '' NOT NULL,
     is_broken tinyint(1) DEFAULT '0' NOT NULL,
     weight DOUBLE PRECISION DEFAULT '1' NOT NULL,
     
@@ -60,10 +60,12 @@ CREATE TABLE tx_pagelinkinsights_statistics (
     max_depth int(11) DEFAULT '0' NOT NULL,
     avg_links_per_page DOUBLE PRECISION DEFAULT '0' NOT NULL,
     network_density DOUBLE PRECISION DEFAULT '0' NOT NULL,
-    
+    language int(11) DEFAULT '0' NOT NULL,
+
     PRIMARY KEY (uid),
     KEY parent (pid),
-    KEY site (site_root)
+    KEY site (site_root),
+    KEY language (language)
 );
 
 CREATE TABLE tx_pagelinkinsights_keywords (

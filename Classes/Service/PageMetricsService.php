@@ -17,9 +17,9 @@ class PageMetricsService {
         $this->pageLinkService = $pageLinkService;
     }
 
-    public function analyzeSite(int $rootPageId): void {
+    public function analyzeSite(int $rootPageId, int $languageId = 0): void {
         // Retrieve link data via the existing service
-        $networkData = $this->pageLinkService->getPageLinksForSubtree($rootPageId);
+        $networkData = $this->pageLinkService->getPageLinksForSubtree($rootPageId, $languageId);
         
         // Calculate metrics
         $pageMetrics = $this->calculatePageMetrics($networkData);
@@ -28,7 +28,7 @@ class PageMetricsService {
         // Save the data
         $this->persistPageMetrics($pageMetrics);
         $this->persistLinkData($networkData['links']);
-        $this->persistGlobalStats($globalStats, $rootPageId);
+        $this->persistGlobalStats($globalStats, $rootPageId, $languageId);
     }
     
     private function calculatePageMetrics(array $networkData): array {
@@ -192,7 +192,9 @@ class PageMetricsService {
                     'source_page' => $link['sourcePageId'],
                     'target_page' => $link['targetPageId'],
                     'content_element' => $link['contentElement']['uid'],
-                    'link_type' => $link['contentElement']['type'],
+                    // Link types now include source table names for references
+                    // authored in third-party records, so guard the column width.
+                    'link_type' => mb_substr((string)$link['contentElement']['type'], 0, 64),
                     'is_broken' => $link['broken'] ? 1 : 0,
                     'weight' => 1.0
                 ]
@@ -200,7 +202,7 @@ class PageMetricsService {
         }
     }
     
-    private function persistGlobalStats(array $stats, int $rootPageId): void
+    private function persistGlobalStats(array $stats, int $rootPageId, int $languageId = 0): void
     {
         $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_statistics');
         $currentTime = time();
@@ -211,7 +213,8 @@ class PageMetricsService {
                 'pid' => 0,
                 'tstamp' => $currentTime,
                 'crdate' => $currentTime,
-                'site_root' => $rootPageId
+                'site_root' => $rootPageId,
+                'language' => $languageId
             ])
         );
     }

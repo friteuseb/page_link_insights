@@ -17,8 +17,15 @@ services:
       $extensionConfiguration: '@TYPO3\CMS\Core\Configuration\ExtensionConfiguration'
       $pageLinkService: '@Cywolf\PageLinkInsights\Service\PageLinkService'
       $themeDataService: '@Cywolf\PageLinkInsights\Service\ThemeDataService'
+      $siteLanguageService: '@Cywolf\PageLinkInsights\Service\SiteLanguageService'
 
   Cywolf\PageLinkInsights\Service\PageLinkService:
+    public: true
+
+  Cywolf\PageLinkInsights\Service\ReferenceIndexLinkProvider:
+    public: true
+
+  Cywolf\PageLinkInsights\Service\SiteLanguageService:
     public: true
 
   Cywolf\PageLinkInsights\Service\PageMetricsService:

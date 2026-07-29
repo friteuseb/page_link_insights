@@ -1,6 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Script starting...');
 
+    // Sélecteur de langue : câblé avant toute vérification de données, sinon il
+    // resterait inerte sur une page sans diagramme (aucune page sélectionnée).
+    // Pas de script inline possible ici, la CSP du backend TYPO3 les bloque.
+    const languageSelect = document.getElementById('pli-language');
+    if (languageSelect) {
+        languageSelect.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('language', this.value);
+            window.location.href = url.toString();
+        });
+    }
+
     const dataElement = document.getElementById('diagram-data');
     const translationsElement = document.getElementById('diagram-translations');
 
@@ -280,6 +292,10 @@ document.addEventListener('DOMContentLoaded', function() {
         node.append("circle")
             .attr("r", d => nodeScale(d.incomingLinks))
             .attr("fill", d => {
+                // Cible d'un lien brisé : la page n'existe plus, il n'y a rien à thématiser
+                if (d.missing) {
+                    return "#330000";
+                }
                 // Si le nœud a un thème principal, utiliser une couleur basée sur ce thème
                 if (d.mainTheme && d.mainTheme.name) {
                     return themeColorScale(d.mainTheme.name);
@@ -288,6 +304,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return "#003300"; // Vert Matrix foncé
             })
             .attr("stroke", d => {
+                if (d.missing) {
+                    return "#ff0000"; // Même rouge que les liens brisés
+                }
                 // Intensité de la bordure basée sur la pertinence du thème
                 if (d.mainTheme && d.mainTheme.relevance) {
                     // Plus la pertinence est élevée, plus la bordure est brillante
@@ -296,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return "#00ff00"; // Bordure verte fluo par défaut
             })
+            .attr("stroke-dasharray", d => d.missing ? "4,3" : null)
             .attr("stroke-width", 2);
 
         // Texte pour les nœuds
@@ -401,9 +421,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 legendX = padding;
             }
 
+            // 60px sous le bord : les boutons de contrôle occupent le coin
+            // supérieur droit et masquaient le titre de la légende.
             const legend = svg.append("g")
                 .attr("class", "legend themes-legend")
-                .attr("transform", `translate(${legendX}, 30)`);
+                .attr("transform", `translate(${legendX}, 60)`);
 
             // Titre de la légende
             legend.append("text")
@@ -553,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     legendX = padding;
                 }
 
-                themesLegend.attr("transform", `translate(${legendX}, 30)`);
+                themesLegend.attr("transform", `translate(${legendX}, 60)`);
             }
 
             // Update link legend position
@@ -563,15 +585,46 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (currentWidth < 768 && uniqueThemes.length > 0) {
                     const themeItemsHeight = uniqueThemes.length * 25;
-                    linkLegendY = 60 + themeItemsHeight;
+                    linkLegendY = 90 + themeItemsHeight;
                 }
 
                 linkLegend.attr("transform", `translate(20, ${linkLegendY})`);
             }
         }
 
+        // Le viewBox n'était calculé qu'au démarrage : agrandir la fenêtre
+        // étirait le dessin au lieu de révéler davantage de surface. On le
+        // recale sur les dimensions réelles du conteneur à chaque redimensionnement.
+        function updateViewBox() {
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            if (w > 0 && h > 0) {
+                svg.attr("viewBox", [0, 0, w, h]);
+                simulation.force("center", d3.forceCenter(w / 2, h / 2));
+                simulation.alpha(0.1).restart();
+            }
+        }
+
         // Listen for window resize events
         window.addEventListener('resize', () => {
+            updateViewBox();
+            updateLegendsPosition();
+        });
+
+        // Le conteneur est en flex : sa taille change aussi sans que la fenêtre
+        // bouge (bandeau masqué, panneau ouvert). ResizeObserver couvre ces cas.
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => {
+                updateViewBox();
+                updateLegendsPosition();
+            }).observe(container);
+        }
+
+        // Le module s'affiche dans l'iframe du backend, dont la mise en page se
+        // stabilise après l'exécution de ce script : les dimensions lues à
+        // l'initialisation sont provisoires. On recale une fois le calque posé.
+        requestAnimationFrame(() => {
+            updateViewBox();
             updateLegendsPosition();
         });
 
