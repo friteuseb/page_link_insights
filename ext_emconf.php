@@ -2,13 +2,13 @@
 
 $EM_CONF[$_EXTKEY] = [
     'title' => 'Page Link Insights',
-    'description' => 'Visualize internal page links with D3.js force diagrams and thematic clustering for content analysis.',
+    'description' => 'Maps internal linking from the TYPO3 reference index and draws it as an interactive force diagram, with per-language theme extraction and broken link detection.',
     'category' => 'module',
     'state' => 'stable',
     'clearCacheOnLoad' => true,
     'author' => 'Cyril Wolfangel',
     'author_email' => 'cyril.wolfangel@gmail.com',
-    'version' => '2.1.3',
+    'version' => '3.0.0',
     'constraints' => [
         'depends' => [
             'typo3' => '14.0.0-14.99.99',

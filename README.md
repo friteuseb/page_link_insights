@@ -8,8 +8,17 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 
 ### Comprehensive Link Analysis
 - **Interactive Force Diagram**: Visualize page relationships with D3.js
-- **Content-Based Analysis**: Focus on actual content links rather than navigation
-- **Link Type Detection**: Identify different types of page references (HTML, typolink, content elements)
+- **Reference Index Based**: Every link comes from a typolink TYPO3 actually
+  recorded, wherever it was authored: rich text, header links, FlexForms, page
+  shortcuts and link fields declared by third-party extensions
+- **Menu Expansion**: Menu elements resolve to the pages they really render
+- **Broken Link Detection**: References to pages that no longer exist are shown
+  as red dashed edges towards a placeholder node
+
+### One Language at a Time
+- **Language Selector**: Switch the whole analysis between the languages of the site
+- **No Blending**: Links, page titles, keywords, themes and statistics all follow
+  the selected language, so translations never contaminate one another
 
 ### Advanced Page Metrics
 - **PageRank Calculation**: See which pages carry the most authority
@@ -19,8 +28,11 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 
 ### Thematic Analysis
 - **Keyword Extraction**: Automatically identify significant terms on each page
+- **TF-IDF Ranking**: Terms are scored against the analysed subtree, so a word
+  carried by most pages is treated as vocabulary rather than subject matter
+- **Language From Site Configuration**: Stop word lists follow the language the
+  site declares, not a guess made from the text
 - **Theme Clustering**: Group related content by detected themes
-- **Page-Theme Association**: See which themes are relevant to each page
 - **NLP Integration**: Uses NlpTools for advanced text analysis
 
 ### Global Statistics
@@ -41,9 +53,29 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 
 ## Requirements
 
-- TYPO3 13.0+
-- PHP 8.1+
-- NlpTools extension (for thematic analysis)
+- TYPO3 14.0+
+- PHP 8.2+
+- NlpTools extension 2.x (for thematic analysis)
+
+## Upgrading to 3.0
+
+Two steps are required after updating, and the module will not show meaningful
+data until both are done.
+
+1. **Run the database schema update** (Admin Tools > Maintenance > Analyze
+   Database Structure, or `vendor/bin/typo3 extension:setup`). Statistics are
+   now recorded per language and need a new column.
+2. **Build the reference index** if your installation has never done so:
+   `vendor/bin/typo3 referenceindex:update`, or the "Update reference index"
+   scheduler task. Links are read from that index; the module warns when it is
+   empty.
+
+Re-run the "Analyze Internal Links" scheduler task afterwards to refresh
+statistics and themes for every configured language.
+
+Expect the link count to change, usually downwards. Version 2 matched any bare
+number in a content element against the page uids and turned the hits into
+links, which inflated the diagram with relations nobody ever authored.
 
 ## Installation
 
@@ -147,7 +179,9 @@ For search functionality enhancement, see [README_SOLR.md](README_SOLR.md).
 
 ## Troubleshooting
 
-- **Empty Visualization**: Ensure selected page has content with page references
+- **Empty Visualization**: Build the reference index first
+  (`vendor/bin/typo3 referenceindex:update`); the module displays a warning when
+  it is empty. Then check that the selected page has content with page references
 - **Missing Links**: Check if links are in the analyzed column positions
 - **Performance Issues**: Large sites may need higher PHP memory limits
 - **Theme Analysis Errors**: Verify NlpTools extension is installed
