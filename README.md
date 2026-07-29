@@ -1,6 +1,6 @@
 # TYPO3 Page Link Insights Extension
 
-![Force Diagram Example](Resources/Public/Images/force-diagram-example.png)
+![The module showing a site's internal linking](Resources/Public/Images/module-overview.jpg)
 
 This TYPO3 extension helps you optimize your website's internal linking structure by drawing every internal link the CMS knows about as an interactive diagram. Links are read from the TYPO3 reference index, so the picture covers rich text, header links, FlexForm values, page shortcuts and link fields declared by other extensions — not just the body text of content elements. The analysis runs one language at a time.
 
@@ -97,8 +97,6 @@ composer require cywolf/page_link_insights
 
 The extension can be configured through the Extension Configuration in TYPO3 Backend:
 
-![Extension Configuration](Resources/Public/Images/extension-configuration.png)
-
 1. Go to Admin Tools > Settings > Extension Configuration
 2. Select "page_link_insights"
 3. Configure the following options:
@@ -147,6 +145,13 @@ The task simply recomputes the link/theme metrics for the configured subtree. On
      placeholder node standing for the page that no longer exists
    - Hover over elements for detailed information
 
+![A broken link and its placeholder node](Resources/Public/Images/broken-links.jpg)
+
+A reference to a page that no longer exists is drawn as a red dashed edge
+towards a red dashed node labelled with the missing page uid. Without that
+placeholder the link would have nothing to point at and would silently vanish
+from the diagram, which is exactly how the detection went unnoticed before.
+
 ### Switching Language
 
 Sites with more than one language show a selector in the module header. It
@@ -156,6 +161,13 @@ exists, and keywords, themes and the statistics strip follow it too.
 
 Pages left untranslated stay in the diagram with their original title and show
 up in the orphaned count, which makes gaps in translation coverage visible.
+
+![The same subtree analysed in English](Resources/Public/Images/language-switch.jpg)
+
+The screenshot above shows the same subtree as the one at the top of this page,
+switched to English: the themes are drawn from English content only, translated
+pages carry their English titles, and the dark nodes are pages that have no
+English translation yet.
 
 ### Interactive Features
 

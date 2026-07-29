@@ -421,11 +421,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 legendX = padding;
             }
 
-            // 60px sous le bord : les boutons de contrôle occupent le coin
-            // supérieur droit et masquaient le titre de la légende.
+            // 110px sous le bord : les deux rangées de boutons de contrôle occupent
+            // le coin supérieur droit et masquaient le titre de la légende.
             const legend = svg.append("g")
                 .attr("class", "legend themes-legend")
-                .attr("transform", `translate(${legendX}, 60)`);
+                .attr("transform", `translate(${legendX}, 110)`);
 
             // Titre de la légende
             legend.append("text")
@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     legendX = padding;
                 }
 
-                themesLegend.attr("transform", `translate(${legendX}, 60)`);
+                themesLegend.attr("transform", `translate(${legendX}, 110)`);
             }
 
             // Update link legend position
