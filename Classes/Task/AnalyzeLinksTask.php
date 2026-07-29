@@ -7,6 +7,7 @@ namespace Cywolf\PageLinkInsights\Task;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Scheduler\Task\AbstractTask;
 use Cywolf\PageLinkInsights\Service\PageMetricsService;
+use Cywolf\PageLinkInsights\Service\SiteLanguageService;
 use Cywolf\PageLinkInsights\Service\ThemeDataService;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
@@ -19,13 +20,28 @@ class AnalyzeLinksTask extends AbstractTask
         try {
             /** @var PageMetricsService $metricsService */
             $metricsService = GeneralUtility::makeInstance(PageMetricsService::class);
-            $metricsService->analyzeSite($this->rootPageId);
 
             /** @var ThemeDataService $themeService */
             $themeService = GeneralUtility::makeInstance(ThemeDataService::class);
 
             $this->cleanOldThemeData();
-            $themeService->analyzePageContent($this->rootPageId);
+
+            // Themes are extracted per language: each one uses its own stop word
+            // list and its own corpus. Analysing only the default language would
+            // leave every translated view of the module without themes.
+            /** @var SiteLanguageService $siteLanguageService */
+            $siteLanguageService = GeneralUtility::makeInstance(SiteLanguageService::class);
+            $languages = $siteLanguageService->getAvailableLanguages($this->rootPageId);
+
+            if ($languages === []) {
+                $languages = [['id' => 0]];
+            }
+
+            foreach ($languages as $language) {
+                $languageId = (int)$language['id'];
+                $metricsService->analyzeSite($this->rootPageId, $languageId);
+                $themeService->analyzePageContent($this->rootPageId, $languageId);
+            }
 
             return true;
         } catch (\Exception $e) {

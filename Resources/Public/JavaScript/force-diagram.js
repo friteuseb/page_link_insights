@@ -1,6 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Script starting...');
 
+    // Sélecteur de langue : câblé avant toute vérification de données, sinon il
+    // resterait inerte sur une page sans diagramme (aucune page sélectionnée).
+    // Pas de script inline possible ici, la CSP du backend TYPO3 les bloque.
+    const languageSelect = document.getElementById('pli-language');
+    if (languageSelect) {
+        languageSelect.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('language', this.value);
+            window.location.href = url.toString();
+        });
+    }
+
     const dataElement = document.getElementById('diagram-data');
     const translationsElement = document.getElementById('diagram-translations');
 

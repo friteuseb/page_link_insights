@@ -16,6 +16,24 @@
                 <small>
                     <f:translate key="module.subtitle">Interactive visualization of page relationships</f:translate>
                 </small>
+
+                <f:if condition="{availableLanguages -> f:count()} > 1">
+                    <span class="language-switch">
+                        <label for="pli-language">
+                            <f:translate key="language.switch.label">Language</f:translate>
+                        </label>
+                        <select id="pli-language"
+                                data-base-url="{f:uri.action(action: 'main')}"
+                                data-page-uid="{pageUid}">
+                            <f:for each="{availableLanguages}" as="language">
+                                <option value="{language.id}"
+                                        <f:if condition="{language.id} == {currentLanguage}">selected="selected"</f:if>>
+                                    {language.title}
+                                </option>
+                            </f:for>
+                        </select>
+                    </span>
+                </f:if>
             </h1>
 
             <!-- L'index de références est la source du diagramme : vide, rien ne peut s'afficher -->

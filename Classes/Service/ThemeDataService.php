@@ -10,21 +10,33 @@ use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use Psr\Log\LoggerInterface;
 use Cywolf\NlpTools\Service\TextAnalysisService;
-use Cywolf\NlpTools\Service\LanguageDetectionService;
 
 class ThemeDataService {
+    /**
+     * A term present on more than this share of the subtree is treated as
+     * vocabulary rather than subject matter, and dropped.
+     */
+    private const MAX_DOCUMENT_RATIO = 0.5;
+
+    /**
+     * Below this many pages, document frequency carries no information.
+     */
+    private const MIN_DOCUMENTS_FOR_IDF = 5;
+
+    private const MAX_TERMS_PER_PAGE = 15;
+
     private ConnectionPool $connectionPool;
     private LoggerInterface $logger;
     private CacheManager $cacheManager;
     private TextAnalysisService $textAnalyzer;
-    private LanguageDetectionService $languageDetector;
-    
+    private SiteLanguageService $siteLanguageService;
+
     public function __construct() {
         $this->connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
         $this->logger = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Log\LogManager::class)->getLogger(__CLASS__);
         $this->cacheManager = GeneralUtility::makeInstance(CacheManager::class);
         $this->textAnalyzer = GeneralUtility::makeInstance(TextAnalysisService::class);
-        $this->languageDetector = GeneralUtility::makeInstance(LanguageDetectionService::class);
+        $this->siteLanguageService = GeneralUtility::makeInstance(SiteLanguageService::class);
     }
 
 /**
@@ -34,16 +46,12 @@ class ThemeDataService {
  * @param int $pageId L'ID de la page
  * @return array An array of significant terms with their frequencies
  */
-private function extractSignificantTerms(string $content, int $pageId): array
+private function extractSignificantTerms(string $content, int $pageId, string $language): array
 {
     try {
-        // Detect the language of the content
-        $language = $this->languageDetector->detectLanguage($content);
-        
-
-        // Add at the beginning
-        $logFile = \TYPO3\CMS\Core\Core\Environment::getProjectPath() . '/var/log/theme_extraction_test.log';
-        file_put_contents($logFile, "=== Test d'extraction pour la page $pageId ===\n", FILE_APPEND);
+        // The language is given by the site configuration, not guessed from the
+        // text: detection returned 'en' for French pages, so French stop words
+        // were never removed and words like "pour" or "vous" ranked as themes.
 
         // Some logs kept for diagnosis
         if ($this->debugMode) {
@@ -68,10 +76,8 @@ private function extractSignificantTerms(string $content, int $pageId): array
         
         try {
             // Tokenizer et enlever les stop words
-            file_put_contents($logFile, "Tentative d'utilisation de nlp_tools...\n", FILE_APPEND);
             $processedContent = $this->textAnalyzer->removeStopWords($cleanedContent, $language);
             $tokens = $this->textAnalyzer->tokenize($processedContent);
-            file_put_contents($logFile, "nlp_tools fonctionne correctement! " . count($tokens) . " tokens extraits\n", FILE_APPEND);
             
             
             // Vérifier si $tokens est un tableau valide
@@ -97,7 +103,6 @@ private function extractSignificantTerms(string $content, int $pageId): array
             // Créer un mapping entre les stems et les tokens originaux
             $stemToOriginalMap = [];
             $stems = $this->textAnalyzer->stem($processedContent, $language);
-             file_put_contents($logFile, "Stemming successful! " . count($stems) . " stems extracted\n", FILE_APPEND);
 
             if (!is_array($stems)) {
                 if ($this->debugMode) {
@@ -170,7 +175,6 @@ private function extractSignificantTerms(string $content, int $pageId): array
                     'pageId' => $pageId
                 ]);
             }
-            file_put_contents($logFile, "ERREUR AVEC NLP-TOOLS: " . $nlpError->getMessage() . "\n", FILE_APPEND);
             return $this->fallbackExtractKeywords($cleanedContent, $pageId);
         }
         
@@ -277,10 +281,61 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
     }
 }
     
-    public function getThemesForSubtree(int $pageUid): array
+    /**
+     * Re-score each page's terms with TF-IDF and drop the ones spread across
+     * most of the subtree.
+     *
+     * Stop word lists are never complete — the French list still let "plus",
+     * "peut" and "cette" through — but a term's document frequency says the
+     * same thing without needing a list: measured here, "plus" appeared on 72
+     * of 124 pages. Anything that common cannot characterise a page, whatever
+     * language it belongs to.
+     *
+     * @param array<int, array<string, int>> $pageKeywords term => frequency, per page
+     * @return array<int, array<string, float>> term => TF-IDF weight, per page
+     */
+    private function weightByInverseDocumentFrequency(array $pageKeywords): array
+    {
+        $documentCount = count($pageKeywords);
+        if ($documentCount < self::MIN_DOCUMENTS_FOR_IDF) {
+            // Too few pages for document frequency to mean anything; the raw
+            // counts are all the signal available.
+            return $pageKeywords;
+        }
+
+        $documentFrequency = [];
+        foreach ($pageKeywords as $keywords) {
+            foreach (array_keys($keywords) as $term) {
+                $documentFrequency[$term] = ($documentFrequency[$term] ?? 0) + 1;
+            }
+        }
+
+        $ubiquityCeiling = $documentCount * self::MAX_DOCUMENT_RATIO;
+
+        $weighted = [];
+        foreach ($pageKeywords as $pid => $keywords) {
+            $totalTerms = array_sum($keywords) ?: 1;
+
+            $scores = [];
+            foreach ($keywords as $term => $frequency) {
+                if ($documentFrequency[$term] > $ubiquityCeiling) {
+                    continue;
+                }
+                $idf = log($documentCount / (1 + $documentFrequency[$term]));
+                $scores[$term] = ($frequency / $totalTerms) * $idf;
+            }
+
+            arsort($scores);
+            $weighted[$pid] = array_slice($scores, 0, self::MAX_TERMS_PER_PAGE, true);
+        }
+
+        return $weighted;
+    }
+
+    public function getThemesForSubtree(int $pageUid, int $languageId = 0): array
     {
         try {
-            $cacheIdentifier = 'themes_' . $pageUid;
+            $cacheIdentifier = 'themes_' . $pageUid . '_' . $languageId;
             $cache = $this->cacheManager->getCache('pages');
             
             // Try to retrieve from cache
@@ -294,9 +349,9 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             
             // Récupérer les données
             $themeData = [
-                'themes' => $this->getThemes($pageIds),
-                'pageThemes' => $this->getPageThemeAssociations($pageIds),
-                'keywords' => $this->getTopKeywords($pageIds)
+                'themes' => $this->getThemes($pageIds, $languageId),
+                'pageThemes' => $this->getPageThemeAssociations($pageIds, $languageId),
+                'keywords' => $this->getTopKeywords($pageIds, $languageId)
             ];
             
             // Stocker en cache
@@ -317,38 +372,47 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         }
     }
 
-    public function analyzePageContent(int $pageUid): void {
+    public function analyzePageContent(int $pageUid, int $languageId = 0): void {
         try {
             // Retrieve all pages in the subtree
             $pageIds = $this->getSubtreePageIds($pageUid);
-            
+
+            $language = $this->siteLanguageService->getIsoCode($pageUid, $languageId);
+
             // Récupérer le contenu des pages
-            $pageContents = $this->getPageContents($pageIds);
-            
+            $pageContents = $this->getPageContents($pageIds, $languageId);
+
             // 1. Analyse des mots-clés par page
             $pageKeywords = [];
             foreach ($pageContents as $pid => $content) {
-                // Correction: We now pass $pid as the second parameter
-                $keywords = $this->extractSignificantTerms($content, $pid);
-                $this->saveKeywords($pid, $keywords);
-                $pageKeywords[$pid] = $keywords;
+                $pageKeywords[$pid] = $this->extractSignificantTerms($content, $pid, $language);
             }
-            
-            // 2. Identify global themes
+
+            // 2. Re-rank against the corpus: a word carried by most of the
+            //    subtree describes none of it. Raw frequency alone put "plus",
+            //    "tout" and "peut" at the top of two thirds of the pages.
+            $pageKeywords = $this->weightByInverseDocumentFrequency($pageKeywords);
+
+            foreach ($pageKeywords as $pid => $keywords) {
+                $this->saveKeywords($pid, $keywords, $languageId);
+            }
+
+            // 3. Identify global themes
             $globalThemes = $this->identifyThemes($pageKeywords);
-            
-            // 3. Sauvegarder les thèmes
-            $themeIds = $this->saveThemes($globalThemes);
-            
-            // 4. Create page-theme associations
+
+            // 4. Sauvegarder les thèmes
+            $themeIds = $this->saveThemes($globalThemes, $languageId);
+
+            // 5. Create page-theme associations
             $this->createPageThemeAssociations($pageKeywords, $themeIds);
-            
+
             $this->logger->info('Analyse thématique terminée', [
                 'pageUid' => $pageUid,
+                'language' => $languageId,
                 'contentCount' => count($pageContents),
                 'themesCount' => count($globalThemes)
             ]);
-            
+
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de l\'analyse du contenu', [
                 'pageUid' => $pageUid,
@@ -385,7 +449,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         }, array_keys($themes), array_values($themes));
     }
 
-    private function saveThemes(array $themes): array {
+    private function saveThemes(array $themes, int $languageId = 0): array {
         $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_themes');
         $now = time();
         $themeIds = [];
@@ -400,7 +464,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                     'theme_name' => $theme['name'],
                     'keywords' => json_encode($theme['keywords']),
                     'weight' => $theme['weight'],
-                    'language' => 0
+                    'language' => $languageId
                 ]
             );
             
@@ -498,7 +562,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         return $allPageIds;
     }
     
-    private function getThemes(array $pageIds): array {
+    private function getThemes(array $pageIds, int $languageId = 0): array {
         if (empty($pageIds)) {
             return [];
         }
@@ -512,6 +576,10 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                 $queryBuilder->expr()->in(
                     'pid',
                     $queryBuilder->createNamedParameter($pageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->eq(
+                    'language',
+                    $queryBuilder->createNamedParameter($languageId, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 )
             )
             ->orderBy('weight', 'DESC')
@@ -519,7 +587,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             ->fetchAllAssociative();
     }
     
-    private function getPageThemeAssociations(array $pageIds): array {
+    private function getPageThemeAssociations(array $pageIds, int $languageId = 0): array {
         if (empty($pageIds)) {
             return [];
         }
@@ -539,6 +607,10 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                 $queryBuilder->expr()->in(
                     'pt.page_uid',
                     $queryBuilder->createNamedParameter($pageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->eq(
+                    't.language',
+                    $queryBuilder->createNamedParameter($languageId, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 )
             )
             ->orderBy('pt.relevance', 'DESC')
@@ -562,7 +634,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
         return $byPage;
     }
     
-    private function getPageContents(array $pageIds): array {
+    private function getPageContents(array $pageIds, int $languageId = 0): array {
         if (empty($pageIds)) {
             return [];
         }
@@ -585,6 +657,14 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                 $queryBuilder->expr()->in(
                     'colPos',
                     $queryBuilder->createNamedParameter($allowedColPos, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                ),
+                // Without this, the six translations of a page were concatenated
+                // into a single bag of words and a single language was guessed
+                // for the mixture, which is how "maquina" and "eine" became
+                // themes of a French site.
+                $queryBuilder->expr()->in(
+                    'sys_language_uid',
+                    $queryBuilder->createNamedParameter([$languageId, -1], \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
                 )
             )
             ->executeQuery()
@@ -605,7 +685,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
     }
     
     
-    private function saveKeywords(int $pageUid, array $keywords): void {
+    private function saveKeywords(int $pageUid, array $keywords, int $languageId = 0): void {
         $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_keywords');
         $now = time();
         
@@ -620,13 +700,13 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                     'keyword' => $keyword,
                     'frequency' => $frequency,
                     'weight' => 1.0,
-                    'language' => 0
+                    'language' => $languageId
                 ]
             );
         }
     }
     
-    private function getTopKeywords(array $pageIds): array {
+    private function getTopKeywords(array $pageIds, int $languageId = 0): array {
         if (empty($pageIds)) {
             return [];
         }
@@ -641,6 +721,10 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                 $queryBuilder->expr()->in(
                     'page_uid',
                     $queryBuilder->createNamedParameter($pageIds, \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY)
+                ),
+                $queryBuilder->expr()->eq(
+                    'language',
+                    $queryBuilder->createNamedParameter($languageId, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
                 )
             )
             ->groupBy('keyword')

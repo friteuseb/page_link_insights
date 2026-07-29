@@ -12,6 +12,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use Cywolf\PageLinkInsights\Service\PageLinkService;
+use Cywolf\PageLinkInsights\Service\SiteLanguageService;
 use Cywolf\PageLinkInsights\Service\ThemeDataService;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
@@ -30,7 +31,8 @@ class BackendController extends ActionController
         protected readonly PageRenderer $pageRenderer,
         protected readonly ExtensionConfiguration $extensionConfiguration,
         protected readonly PageLinkService $pageLinkService,
-        protected readonly ThemeDataService $themeDataService
+        protected readonly ThemeDataService $themeDataService,
+        protected readonly SiteLanguageService $siteLanguageService
     ) {
         $this->extensionSettings = $this->extensionConfiguration->get('page_link_insights') ?? [];
     }
@@ -44,12 +46,20 @@ class BackendController extends ActionController
         $pageUid = (int)($this->request->getQueryParams()['id'] ?? 0);
         $colPosToAnalyze = $this->extensionSettings['colPosToAnalyze'] ?? '0,2';
 
-        if ($pageUid > 0) {
-            $this->clearThemeCache($pageUid);
+        // One language at a time: blending translations mixes vocabularies and
+        // makes both the link graph and the extracted themes meaningless.
+        $availableLanguages = $this->siteLanguageService->getAvailableLanguages($pageUid);
+        $languageId = (int)($this->request->getQueryParams()['language'] ?? 0);
+        if (!$this->siteLanguageService->isValidLanguage($pageUid, $languageId)) {
+            $languageId = 0;
         }
 
-        $data = $this->prepareData($pageUid);
-        $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
+        if ($pageUid > 0) {
+            $this->clearThemeCache($pageUid, $languageId);
+        }
+
+        $data = $this->prepareData($pageUid, $languageId);
+        $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid, $languageId) : [];
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
         $referenceIndexPopulated = $this->pageLinkService->isReferenceIndexPopulated();
 
@@ -63,6 +73,9 @@ class BackendController extends ActionController
             'colPosToAnalyze' => $colPosToAnalyze,
             'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
             'referenceIndexPopulated' => $referenceIndexPopulated,
+            'availableLanguages' => $availableLanguages,
+            'currentLanguage' => $languageId,
+            'pageUid' => $pageUid,
             'translations' => json_encode($translations),
         ]);
 
@@ -111,15 +124,15 @@ class BackendController extends ActionController
         ];
     }
 
-    protected function prepareData(int $pageUid): array
+    protected function prepareData(int $pageUid, int $languageId = 0): array
     {
         if ($pageUid === 0) {
             return ['nodes' => [], 'links' => []];
         }
 
         try {
-            $data = $this->pageLinkService->getPageLinksForSubtree($pageUid);
-            $themeData = $this->themeDataService->getThemesForSubtree($pageUid);
+            $data = $this->pageLinkService->getPageLinksForSubtree($pageUid, $languageId);
+            $themeData = $this->themeDataService->getThemesForSubtree($pageUid, $languageId);
             $data['nodes'] = $this->themeDataService->enrichNodesWithThemes($data['nodes'], $themeData);
 
             return $data;
@@ -129,7 +142,7 @@ class BackendController extends ActionController
         }
     }
 
-    protected function getPageKPIs(int $pageUid): array
+    protected function getPageKPIs(int $pageUid, int $languageId = 0): array
     {
         $connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
 
@@ -137,6 +150,12 @@ class BackendController extends ActionController
         $statistics = $queryBuilder
             ->select('*')
             ->from('tx_pagelinkinsights_statistics')
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'language',
+                    $queryBuilder->createNamedParameter($languageId, \TYPO3\CMS\Core\Database\Connection::PARAM_INT)
+                )
+            )
             ->orderBy('tstamp', 'DESC')
             ->setMaxResults(1)
             ->executeQuery()
@@ -175,11 +194,11 @@ class BackendController extends ActionController
         ];
     }
 
-    protected function clearThemeCache(int $pageUid): void
+    protected function clearThemeCache(int $pageUid, int $languageId = 0): void
     {
         try {
             $cacheManager = GeneralUtility::makeInstance(CacheManager::class);
-            $cacheIdentifier = 'themes_' . $pageUid;
+            $cacheIdentifier = 'themes_' . $pageUid . '_' . $languageId;
 
             if ($cacheManager->hasCache('pages')) {
                 $pagesCache = $cacheManager->getCache('pages');

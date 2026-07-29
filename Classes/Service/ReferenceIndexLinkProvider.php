@@ -90,9 +90,10 @@ class ReferenceIndexLinkProvider
      *
      * @param int[] $pageUids Pages of the analysed subtree
      * @param int[] $allowedColPos Column positions to analyse (tt_content only)
+     * @param int $languageId Language whose records are analysed
      * @return array<int, array{sourcePageUid: int, targetPageUid: int, sourceTable: string, sourceUid: int, sourceField: string, contentElement: array{uid: int, type: string, header: string, colPos: int}}>
      */
-    public function getReferences(array $pageUids, array $allowedColPos, bool $includeHidden): array
+    public function getReferences(array $pageUids, array $allowedColPos, bool $includeHidden, int $languageId = 0): array
     {
         if ($pageUids === []) {
             return [];
@@ -104,8 +105,53 @@ class ReferenceIndexLinkProvider
                 $references,
                 $table === 'pages'
                     ? $this->getReferencesFromPages($pageUids)
-                    : $this->getReferencesFromRecords($table, $pageUids, $allowedColPos, $includeHidden)
+                    : $this->getReferencesFromRecords($table, $pageUids, $allowedColPos, $includeHidden, $languageId)
             );
+        }
+
+        return $this->normaliseTargetsToDefaultLanguage($references);
+    }
+
+    /**
+     * A typolink may point at a translated page record. Nodes are keyed by the
+     * default-language uid, so such targets are folded back onto their original
+     * or they would dangle against a graph that has no node for them.
+     */
+    private function normaliseTargetsToDefaultLanguage(array $references): array
+    {
+        $targets = array_unique(array_column($references, 'targetPageUid'));
+        if ($targets === []) {
+            return $references;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+
+        $rows = $queryBuilder
+            ->select('uid', 'l10n_parent')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->in('uid', $queryBuilder->createNamedParameter($targets, Connection::PARAM_INT_ARRAY)),
+                $queryBuilder->expr()->gt('sys_language_uid', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)),
+                $queryBuilder->expr()->gt('l10n_parent', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT))
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        if ($rows === []) {
+            return $references;
+        }
+
+        $originalOf = [];
+        foreach ($rows as $row) {
+            $originalOf[(int)$row['uid']] = (int)$row['l10n_parent'];
+        }
+
+        foreach ($references as &$reference) {
+            $target = $reference['targetPageUid'];
+            if (isset($originalOf[$target])) {
+                $reference['targetPageUid'] = $originalOf[$target];
+            }
         }
 
         return $references;
@@ -202,7 +248,7 @@ class ReferenceIndexLinkProvider
      * @param int[] $pageUids
      * @param int[] $allowedColPos
      */
-    private function getReferencesFromRecords(string $table, array $pageUids, array $allowedColPos, bool $includeHidden): array
+    private function getReferencesFromRecords(string $table, array $pageUids, array $allowedColPos, bool $includeHidden, int $languageId = 0): array
     {
         $ctrl = $GLOBALS['TCA'][$table]['ctrl'] ?? [];
         $hasColPos = isset($GLOBALS['TCA'][$table]['columns']['colPos']);
@@ -243,10 +289,14 @@ class ReferenceIndexLinkProvider
             );
         }
         if ($languageField !== null) {
-            // Pages are collected in the default language only, so translated
-            // records would just duplicate every link of their originals.
+            // Only the analysed language, plus records marked "all languages"
+            // (-1). Mixing translations in would duplicate every link of their
+            // originals and blend languages the viewer did not ask for.
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->lte('s.' . $languageField, $queryBuilder->createNamedParameter(0, Connection::PARAM_INT))
+                $queryBuilder->expr()->in(
+                    's.' . $languageField,
+                    $queryBuilder->createNamedParameter([$languageId, -1], Connection::PARAM_INT_ARRAY)
+                )
             );
         }
 

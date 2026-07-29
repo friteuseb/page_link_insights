@@ -24,6 +24,9 @@
             <trans-unit id="module.description">
                 <source>Explore how your pages connect through explicit links and semantic suggestions.</source>
             </trans-unit>
+            <trans-unit id="language.switch.label">
+                <source>Language</source>
+            </trans-unit>
             <trans-unit id="refindex.empty.title">
                 <source>The reference index is empty</source>
             </trans-unit>

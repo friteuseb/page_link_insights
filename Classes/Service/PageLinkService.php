@@ -64,10 +64,10 @@ class PageLinkService
         return $excludedDokTypes;
     }
 
-    public function getPageLinksForSubtree(int $pageUid): array
+    public function getPageLinksForSubtree(int $pageUid, int $languageId = 0): array
     {
         // Get all pages in the subtree (only pages under the selected page)
-        $pages = $this->getPageTreeInfo($pageUid);
+        $pages = $this->getPageTreeInfo($pageUid, $languageId);
 
         if (empty($pages)) {
             return ['nodes' => [], 'links' => []];
@@ -76,7 +76,7 @@ class PageLinkService
         $pageUids = array_map('intval', array_column($pages, 'uid'));
         $subtree = array_flip($pageUids);
 
-        $allLinks = $this->getContentElementLinks($pageUids);
+        $allLinks = $this->getContentElementLinks($pageUids, $languageId);
 
         // A target outside the subtree is either a page we deliberately left out
         // of this view, or a page that no longer exists. Only the latter is a
@@ -309,7 +309,7 @@ class PageLinkService
      * itself; descending would otherwise amputate everything below it, which
      * silently hid whole branches of the site from the analysis.
      */
-    private function getPageTreeInfo(int $rootPageId): array
+    private function getPageTreeInfo(int $rootPageId, int $languageId = 0): array
     {
         $excludedDokTypes = array_flip($this->getExcludedDokTypes());
 
@@ -340,10 +340,70 @@ class PageLinkService
             }
         }
 
-        return array_values(array_filter(
+        $allPages = array_values(array_filter(
             $allPages,
             fn(array $page) => !isset($excludedDokTypes[(int)$page['doktype']])
         ));
+
+        return $this->applyTranslatedTitles($allPages, $languageId);
+    }
+
+    /**
+     * Replace node labels with their translation.
+     *
+     * The tree itself is not translated: a page translation carries no children
+     * of its own, it hangs off the original. So the graph keeps the default
+     * language structure and only the labels follow the selected language.
+     * Pages left untranslated keep their original title, which makes gaps in
+     * translation coverage visible rather than hiding those pages.
+     */
+    private function applyTranslatedTitles(array $pages, int $languageId): array
+    {
+        if ($languageId <= 0 || $pages === []) {
+            return $pages;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(new DeletedRestriction());
+
+        if (!$this->includeHidden) {
+            $queryBuilder->getRestrictions()->add(new HiddenRestriction());
+        }
+
+        $rows = $queryBuilder
+            ->select('title', 'l10n_parent')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->in(
+                    'l10n_parent',
+                    $queryBuilder->createNamedParameter(
+                        array_map('intval', array_column($pages, 'uid')),
+                        Connection::PARAM_INT_ARRAY
+                    )
+                ),
+                $queryBuilder->expr()->eq(
+                    'sys_language_uid',
+                    $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
+                )
+            )
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $translatedTitle = [];
+        foreach ($rows as $row) {
+            $translatedTitle[(int)$row['l10n_parent']] = (string)$row['title'];
+        }
+
+        foreach ($pages as &$page) {
+            $uid = (int)$page['uid'];
+            if (isset($translatedTitle[$uid]) && $translatedTitle[$uid] !== '') {
+                $page['title'] = $translatedTitle[$uid];
+            }
+        }
+
+        return $pages;
     }
 
     /**
@@ -417,7 +477,7 @@ class PageLinkService
             ->fetchAllAssociative();
     }
 
-    private function getContentElementLinks(array $pageUids): array
+    private function getContentElementLinks(array $pageUids, int $languageId = 0): array
     {
         if (empty($pageUids)) {
             return [];
@@ -430,7 +490,8 @@ class PageLinkService
         $references = $this->referenceIndexLinkProvider->getReferences(
             $pageUids,
             $this->allowedColPos,
-            $this->includeHidden
+            $this->includeHidden,
+            $languageId
         );
 
         foreach ($references as $reference) {
@@ -444,7 +505,7 @@ class PageLinkService
 
         // Menus resolve to pages the reference index cannot know about: a menu
         // pointing at one page renders links to that page's children.
-        $links = array_merge($links, $this->getMenuLinks($pageUids));
+        $links = array_merge($links, $this->getMenuLinks($pageUids, $languageId));
 
         // Add semantic suggestion links
         if ($this->shouldIncludeSemanticSuggestions()) {
@@ -460,7 +521,7 @@ class PageLinkService
      *
      * @param int[] $pageUids
      */
-    private function getMenuLinks(array $pageUids): array
+    private function getMenuLinks(array $pageUids, int $languageId = 0): array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tt_content');
         $queryBuilder->getRestrictions()
@@ -490,9 +551,9 @@ class PageLinkService
                         Connection::PARAM_STR_ARRAY
                     )
                 ),
-                $queryBuilder->expr()->lte(
+                $queryBuilder->expr()->in(
                     'sys_language_uid',
-                    $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)
+                    $queryBuilder->createNamedParameter([$languageId, -1], Connection::PARAM_INT_ARRAY)
                 )
             )
             ->executeQuery()

@@ -60,10 +60,12 @@ CREATE TABLE tx_pagelinkinsights_statistics (
     max_depth int(11) DEFAULT '0' NOT NULL,
     avg_links_per_page DOUBLE PRECISION DEFAULT '0' NOT NULL,
     network_density DOUBLE PRECISION DEFAULT '0' NOT NULL,
-    
+    language int(11) DEFAULT '0' NOT NULL,
+
     PRIMARY KEY (uid),
     KEY parent (pid),
-    KEY site (site_root)
+    KEY site (site_root),
+    KEY language (language)
 );
 
 CREATE TABLE tx_pagelinkinsights_keywords (
