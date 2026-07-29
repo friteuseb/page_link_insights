@@ -32,7 +32,7 @@ CREATE TABLE tx_pagelinkinsights_linkanalysis (
     source_page int(11) DEFAULT '0' NOT NULL,
     target_page int(11) DEFAULT '0' NOT NULL,
     content_element int(11) DEFAULT '0' NOT NULL,
-    link_type varchar(32) DEFAULT '' NOT NULL,
+    link_type varchar(64) DEFAULT '' NOT NULL,
     is_broken tinyint(1) DEFAULT '0' NOT NULL,
     weight DOUBLE PRECISION DEFAULT '1' NOT NULL,
     

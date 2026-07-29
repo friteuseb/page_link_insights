@@ -51,6 +51,7 @@ class BackendController extends ActionController
         $data = $this->prepareData($pageUid);
         $kpis = $pageUid > 0 ? $this->getPageKPIs($pageUid) : [];
         $semanticSuggestionInstalled = $this->pageLinkService->shouldIncludeSemanticSuggestions();
+        $referenceIndexPopulated = $this->pageLinkService->isReferenceIndexPopulated();
 
         $translations = $this->getTranslations();
 
@@ -61,6 +62,7 @@ class BackendController extends ActionController
             'noPageSelected' => ($pageUid === 0),
             'colPosToAnalyze' => $colPosToAnalyze,
             'semanticSuggestionInstalled' => $semanticSuggestionInstalled,
+            'referenceIndexPopulated' => $referenceIndexPopulated,
             'translations' => json_encode($translations),
         ]);
 

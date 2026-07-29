@@ -24,6 +24,12 @@
             <trans-unit id="module.description">
                 <source>Explore how your pages connect through explicit links and semantic suggestions.</source>
             </trans-unit>
+            <trans-unit id="refindex.empty.title">
+                <source>The reference index is empty</source>
+            </trans-unit>
+            <trans-unit id="refindex.empty.message">
+                <source>Page Link Insights reads internal links from the TYPO3 reference index. Build it once with the scheduler task "Update reference index", or from the command line, then reload this module.</source>
+            </trans-unit>
             <trans-unit id="module.semanticEnabled">
                 <source>Semantic Suggestion extension detected! Semantic content relationships are now visible in the diagram as purple dashed lines.</source>
             </trans-unit>

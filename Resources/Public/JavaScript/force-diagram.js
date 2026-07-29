@@ -280,6 +280,10 @@ document.addEventListener('DOMContentLoaded', function() {
         node.append("circle")
             .attr("r", d => nodeScale(d.incomingLinks))
             .attr("fill", d => {
+                // Cible d'un lien brisé : la page n'existe plus, il n'y a rien à thématiser
+                if (d.missing) {
+                    return "#330000";
+                }
                 // Si le nœud a un thème principal, utiliser une couleur basée sur ce thème
                 if (d.mainTheme && d.mainTheme.name) {
                     return themeColorScale(d.mainTheme.name);
@@ -288,6 +292,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return "#003300"; // Vert Matrix foncé
             })
             .attr("stroke", d => {
+                if (d.missing) {
+                    return "#ff0000"; // Même rouge que les liens brisés
+                }
                 // Intensité de la bordure basée sur la pertinence du thème
                 if (d.mainTheme && d.mainTheme.relevance) {
                     // Plus la pertinence est élevée, plus la bordure est brillante
@@ -296,6 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return "#00ff00"; // Bordure verte fluo par défaut
             })
+            .attr("stroke-dasharray", d => d.missing ? "4,3" : null)
             .attr("stroke-width", 2);
 
         // Texte pour les nœuds

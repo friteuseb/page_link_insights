@@ -21,6 +21,9 @@ services:
   Cywolf\PageLinkInsights\Service\PageLinkService:
     public: true
 
+  Cywolf\PageLinkInsights\Service\ReferenceIndexLinkProvider:
+    public: true
+
   Cywolf\PageLinkInsights\Service\PageMetricsService:
     public: true
     arguments:

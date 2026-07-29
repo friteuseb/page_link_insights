@@ -192,7 +192,9 @@ class PageMetricsService {
                     'source_page' => $link['sourcePageId'],
                     'target_page' => $link['targetPageId'],
                     'content_element' => $link['contentElement']['uid'],
-                    'link_type' => $link['contentElement']['type'],
+                    // Link types now include source table names for references
+                    // authored in third-party records, so guard the column width.
+                    'link_type' => mb_substr((string)$link['contentElement']['type'], 0, 64),
                     'is_broken' => $link['broken'] ? 1 : 0,
                     'weight' => 1.0
                 ]
