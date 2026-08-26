@@ -9,9 +9,18 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Database\Connection;
 
 class PageMetricsService {
+    private const TABLE_PAGE_ANALYSIS = 'tx_pagelinkinsights_pageanalysis';
+    private const TABLE_LINK_ANALYSIS = 'tx_pagelinkinsights_linkanalysis';
+    private const TABLE_STATISTICS = 'tx_pagelinkinsights_statistics';
+
+    /**
+     * A full site holds far more page uids than a single IN() should carry.
+     */
+    private const DELETE_CHUNK_SIZE = 500;
+
     private ConnectionPool $connectionPool;
     private PageLinkService $pageLinkService;
-    
+
     public function __construct(PageLinkService $pageLinkService) {
         $this->connectionPool = GeneralUtility::makeInstance(ConnectionPool::class);
         $this->pageLinkService = $pageLinkService;
@@ -20,44 +29,52 @@ class PageMetricsService {
     public function analyzeSite(int $rootPageId, int $languageId = 0): void {
         // Retrieve link data via the existing service
         $networkData = $this->pageLinkService->getPageLinksForSubtree($rootPageId, $languageId);
-        
+
         // Calculate metrics
         $pageMetrics = $this->calculatePageMetrics($networkData);
         $globalStats = $this->calculateGlobalStats($networkData);
-        
+
         // Save the data
         $this->persistPageMetrics($pageMetrics);
-        $this->persistLinkData($networkData['links']);
+        $this->persistLinkData($networkData['links'], array_keys($pageMetrics));
         $this->persistGlobalStats($globalStats, $rootPageId, $languageId);
     }
-    
+
     private function calculatePageMetrics(array $networkData): array {
         $pageMetrics = [];
         $nodes = $networkData['nodes'];
         $links = $networkData['links'];
-        
+
         // Prepare counters
         $inboundLinks = [];
         $outboundLinks = [];
         $brokenLinks = [];
-        
+
+        // PageRank needs, for every page, the pages that link to it. Building
+        // that adjacency here — in the pass that already walks every link —
+        // costs nothing; rebuilding it from the flat link list inside the
+        // iteration loop is what made a full-site run never finish (#27).
+        $incoming = [];
+
         // Compter les liens
         foreach ($links as $link) {
             $sourceId = $link['sourcePageId'];
             $targetId = $link['targetPageId'];
-            
+
             // Liens sortants
             if (!isset($outboundLinks[$sourceId])) {
                 $outboundLinks[$sourceId] = 0;
             }
             $outboundLinks[$sourceId]++;
-            
+
             // Liens entrants
             if (!isset($inboundLinks[$targetId])) {
                 $inboundLinks[$targetId] = 0;
             }
             $inboundLinks[$targetId]++;
-            
+
+            $incoming[$targetId][] = $sourceId;
+
             // Broken links
             if ($link['broken']) {
                 if (!isset($brokenLinks[$sourceId])) {
@@ -66,76 +83,91 @@ class PageMetricsService {
                 $brokenLinks[$sourceId]++;
             }
         }
-        
+
         // Calculer le PageRank
-        $pageRanks = $this->calculatePageRank($nodes, $links);
-        
+        $pageRanks = $this->calculatePageRank($nodes, $incoming, $outboundLinks);
+
+        $totalLinks = count($links);
+
         // Assemble metrics per page
         foreach ($nodes as $node) {
             $pageId = $node['id'];
+            $inDegree = $inboundLinks[$pageId] ?? 0;
+            $outDegree = $outboundLinks[$pageId] ?? 0;
+
             $pageMetrics[$pageId] = [
                 'page_uid' => $pageId,
                 'pagerank' => $pageRanks[$pageId] ?? 0.0,
-                'inbound_links' => $inboundLinks[$pageId] ?? 0,
-                'outbound_links' => $outboundLinks[$pageId] ?? 0,
+                'inbound_links' => $inDegree,
+                'outbound_links' => $outDegree,
                 'broken_links' => $brokenLinks[$pageId] ?? 0,
-                'centrality_score' => $this->calculateCentrality($pageId, $links)
+                // Degree centrality, normalised over the whole link set. A
+                // subtree without a single link has no centrality to speak of,
+                // and dividing by it used to raise a DivisionByZeroError — an
+                // \Error, which the scheduler task could not even catch.
+                'centrality_score' => $totalLinks > 0
+                    ? ($inDegree + $outDegree) / (2 * $totalLinks)
+                    : 0.0,
             ];
         }
-        
+
         return $pageMetrics;
     }
-    
-    private function calculatePageRank(array $nodes, array $links, float $dampingFactor = 0.85, int $iterations = 20): array {
+
+    /**
+     * @param array<int, array{id: string}> $nodes
+     * @param array<string, string[]> $incoming Source page ids, keyed by the page they point at
+     * @param array<string, int> $outDegrees Outgoing link count, keyed by page id
+     * @return array<string, float>
+     */
+    private function calculatePageRank(array $nodes, array $incoming, array $outDegrees, float $dampingFactor = 0.85, int $iterations = 20): array {
         $numNodes = count($nodes);
+
+        if ($numNodes === 0) {
+            return [];
+        }
+
         $pageRank = [];
-        
+
         // Initialisation
         foreach ($nodes as $node) {
             $pageRank[$node['id']] = 1 / $numNodes;
         }
-        
+
+        $base = (1 - $dampingFactor) / $numNodes;
+        $nodeIds = array_keys($pageRank);
+
         // Algorithm iterations
         for ($i = 0; $i < $iterations; $i++) {
             $newRank = [];
-            
-            foreach ($nodes as $node) {
-                $nodeId = $node['id'];
-                $incomingLinks = array_filter($links, fn($link) => $link['targetPageId'] === $nodeId);
-                
-                $sum = 0;
-                foreach ($incomingLinks as $link) {
-                    $sourceId = $link['sourcePageId'];
-                    $outDegree = count(array_filter($links, fn($l) => $l['sourcePageId'] === $sourceId));
+
+            foreach ($nodeIds as $nodeId) {
+                $sum = 0.0;
+
+                foreach ($incoming[$nodeId] ?? [] as $sourceId) {
+                    $outDegree = $outDegrees[$sourceId] ?? 0;
                     if ($outDegree > 0) {
-                        $sum += $pageRank[$sourceId] / $outDegree;
+                        $sum += ($pageRank[$sourceId] ?? 0.0) / $outDegree;
                     }
                 }
-                
-                $newRank[$nodeId] = (1 - $dampingFactor) / $numNodes + $dampingFactor * $sum;
+
+                $newRank[$nodeId] = $base + $dampingFactor * $sum;
             }
-            
+
             $pageRank = $newRank;
         }
-        
+
         return $pageRank;
     }
-    
-    private function calculateCentrality(string $pageId, array $links): float {
-        $inDegree = count(array_filter($links, fn($link) => $link['targetPageId'] === $pageId));
-        $outDegree = count(array_filter($links, fn($link) => $link['sourcePageId'] === $pageId));
-        
-        return ($inDegree + $outDegree) / (2 * count($links));
-    }
-    
+
     private function calculateGlobalStats(array $networkData): array {
         $nodes = $networkData['nodes'];
         $links = $networkData['links'];
-        
+
         $brokenLinks = count(array_filter($links, fn($link) => $link['broken']));
         $totalLinks = count($links);
         $totalPages = count($nodes);
-        
+
         // Calculer les pages orphelines (sans liens entrants)
         $hasIncomingLinks = [];
         foreach ($links as $link) {
@@ -147,11 +179,11 @@ class PageMetricsService {
                 $orphanedPages++;
             }
         }
-        
+
         // Calculate network density
         $maxPossibleLinks = $totalPages * ($totalPages - 1);
         $networkDensity = $maxPossibleLinks > 0 ? $totalLinks / $maxPossibleLinks : 0;
-        
+
         return [
             'total_pages' => $totalPages,
             'total_links' => $totalLinks,
@@ -161,54 +193,106 @@ class PageMetricsService {
             'network_density' => $networkDensity
         ];
     }
-    
+
     private function persistPageMetrics(array $pageMetrics): void {
-        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_pageanalysis');
+        if ($pageMetrics === []) {
+            return;
+        }
+
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_PAGE_ANALYSIS);
         $currentTime = time();
-        
+
+        // Both readers of this table take the newest row per page and discard
+        // the rest, so appending a fresh set on every run only grew the table by
+        // the size of the site each time. Replace what we are about to rewrite.
+        $this->deleteForPages(self::TABLE_PAGE_ANALYSIS, 'page_uid', array_keys($pageMetrics));
+
+        $rows = [];
         foreach ($pageMetrics as $metrics) {
-            $connection->insert(
-                'tx_pagelinkinsights_pageanalysis',
-                array_merge($metrics, [
-                    'pid' => 0,
-                    'tstamp' => $currentTime,
-                    'crdate' => $currentTime
-                ])
-            );
+            $rows[] = [
+                'pid' => 0,
+                'tstamp' => $currentTime,
+                'crdate' => $currentTime,
+                'page_uid' => (int)$metrics['page_uid'],
+                'pagerank' => $metrics['pagerank'],
+                'inbound_links' => $metrics['inbound_links'],
+                'outbound_links' => $metrics['outbound_links'],
+                'broken_links' => $metrics['broken_links'],
+                'centrality_score' => $metrics['centrality_score'],
+            ];
         }
+
+        $connection->bulkInsert(
+            self::TABLE_PAGE_ANALYSIS,
+            $rows,
+            ['pid', 'tstamp', 'crdate', 'page_uid', 'pagerank', 'inbound_links', 'outbound_links', 'broken_links', 'centrality_score']
+        );
     }
-    
-    private function persistLinkData(array $links): void {
-        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_linkanalysis');
+
+    /**
+     * @param array<int, array<string, mixed>> $links
+     * @param array<int, string|int> $subtreePageUids Pages this run covered, whose rows are being replaced
+     */
+    private function persistLinkData(array $links, array $subtreePageUids): void {
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_LINK_ANALYSIS);
         $currentTime = time();
-        
-        foreach ($links as $link) {
-            $connection->insert(
-                'tx_pagelinkinsights_linkanalysis',
-                [
-                    'pid' => 0,
-                    'tstamp' => $currentTime,
-                    'crdate' => $currentTime,
-                    'source_page' => $link['sourcePageId'],
-                    'target_page' => $link['targetPageId'],
-                    'content_element' => $link['contentElement']['uid'],
-                    // Link types now include source table names for references
-                    // authored in third-party records, so guard the column width.
-                    'link_type' => mb_substr((string)$link['contentElement']['type'], 0, 64),
-                    'is_broken' => $link['broken'] ? 1 : 0,
-                    'weight' => 1.0
-                ]
-            );
+
+        // Runs unconditionally: a subtree that lost its last link must not keep
+        // the rows describing links it no longer has.
+        $this->deleteForPages(self::TABLE_LINK_ANALYSIS, 'source_page', $subtreePageUids);
+
+        if ($links === []) {
+            return;
         }
+
+        $rows = [];
+        foreach ($links as $link) {
+            $rows[] = [
+                'pid' => 0,
+                'tstamp' => $currentTime,
+                'crdate' => $currentTime,
+                'source_page' => (int)$link['sourcePageId'],
+                'target_page' => (int)$link['targetPageId'],
+                'content_element' => (int)$link['contentElement']['uid'],
+                // Link types now include source table names for references
+                // authored in third-party records, so guard the column width.
+                'link_type' => mb_substr((string)$link['contentElement']['type'], 0, 64),
+                'is_broken' => $link['broken'] ? 1 : 0,
+                'weight' => 1.0,
+            ];
+        }
+
+        $connection->bulkInsert(
+            self::TABLE_LINK_ANALYSIS,
+            $rows,
+            ['pid', 'tstamp', 'crdate', 'source_page', 'target_page', 'content_element', 'link_type', 'is_broken', 'weight']
+        );
     }
-    
+
     private function persistGlobalStats(array $stats, int $rootPageId, int $languageId = 0): void
     {
-        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_statistics');
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_STATISTICS);
         $currentTime = time();
-        
+
+        // One row per site root and language, replaced on every run — the
+        // backend module only ever reads the most recent one.
+        $queryBuilder = $connection->createQueryBuilder();
+        $queryBuilder
+            ->delete(self::TABLE_STATISTICS)
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'site_root',
+                    $queryBuilder->createNamedParameter($rootPageId, Connection::PARAM_INT)
+                ),
+                $queryBuilder->expr()->eq(
+                    'language',
+                    $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)
+                )
+            )
+            ->executeStatement();
+
         $connection->insert(
-            'tx_pagelinkinsights_statistics',
+            self::TABLE_STATISTICS,
             array_merge($stats, [
                 'pid' => 0,
                 'tstamp' => $currentTime,
@@ -217,5 +301,33 @@ class PageMetricsService {
                 'language' => $languageId
             ])
         );
+    }
+
+    /**
+     * Clears the rows of the pages about to be rewritten, in batches.
+     *
+     * @param array<int, string|int> $pageUids
+     */
+    private function deleteForPages(string $table, string $column, array $pageUids): void
+    {
+        if ($pageUids === []) {
+            return;
+        }
+
+        $connection = $this->connectionPool->getConnectionForTable($table);
+        $uids = array_values(array_unique(array_map('intval', $pageUids)));
+
+        foreach (array_chunk($uids, self::DELETE_CHUNK_SIZE) as $chunk) {
+            $queryBuilder = $connection->createQueryBuilder();
+            $queryBuilder
+                ->delete($table)
+                ->where(
+                    $queryBuilder->expr()->in(
+                        $column,
+                        $queryBuilder->createNamedParameter($chunk, Connection::PARAM_INT_ARRAY)
+                    )
+                )
+                ->executeStatement();
+        }
     }
 }
