@@ -1,6 +1,6 @@
 {
     "name": "cywolf/page_link_insights",
-    "version": "3.0.1",
+    "version": "3.0.2",
     "type": "typo3-cms-extension",
     "description": "Maps internal linking from the TYPO3 reference index and draws it as an interactive force diagram, with per-language theme extraction and broken link detection.",
     "license": "GPL-2.0-or-later",
