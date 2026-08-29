@@ -393,9 +393,7 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
             //    "tout" and "peut" at the top of two thirds of the pages.
             $pageKeywords = $this->weightByInverseDocumentFrequency($pageKeywords);
 
-            foreach ($pageKeywords as $pid => $keywords) {
-                $this->saveKeywords($pid, $keywords, $languageId);
-            }
+            $this->saveKeywords($pageKeywords, $languageId);
 
             // 3. Identify global themes
             $globalThemes = $this->identifyThemes($pageKeywords);
@@ -475,9 +473,9 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
     }
 
     private function createPageThemeAssociations(array $pageKeywords, array $themeIds): void {
-        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_page_themes');
         $now = time();
-        
+        $rows = [];
+
         foreach ($pageKeywords as $pageId => $keywords) {
             // Pour chaque thème, calculer la pertinence pour cette page
             foreach ($themeIds as $themeName => $themeId) {
@@ -496,20 +494,31 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
                 }
                 
                 if ($relevance > 0) {
-                    $connection->insert(
-                        'tx_pagelinkinsights_page_themes',
-                        [
-                            'pid' => 0,
-                            'tstamp' => $now,
-                            'crdate' => $now,
-                            'page_uid' => $pageId,
-                            'theme_uid' => $themeId,
-                            'relevance' => $relevance
-                        ]
-                    );
+                    $rows[] = [
+                        'pid' => 0,
+                        'tstamp' => $now,
+                        'crdate' => $now,
+                        'page_uid' => (int)$pageId,
+                        'theme_uid' => (int)$themeId,
+                        'relevance' => $relevance
+                    ];
                 }
             }
         }
+
+        if ($rows === []) {
+            return;
+        }
+
+        // Ten themes per page across the whole subtree: batched for the same
+        // reason as the keywords above.
+        $this->connectionPool
+            ->getConnectionForTable('tx_pagelinkinsights_page_themes')
+            ->bulkInsert(
+                'tx_pagelinkinsights_page_themes',
+                $rows,
+                ['pid', 'tstamp', 'crdate', 'page_uid', 'theme_uid', 'relevance']
+            );
     }
     
     private function getSubtreePageIds(int $rootPageId): array
@@ -685,25 +694,43 @@ private function fallbackExtractKeywords(string $content, int $pageId): array
     }
     
     
-    private function saveKeywords(int $pageUid, array $keywords, int $languageId = 0): void {
-        $connection = $this->connectionPool->getConnectionForTable('tx_pagelinkinsights_keywords');
+    /**
+     * A site-wide run produces fifteen keywords per page: on a few thousand
+     * pages that was tens of thousands of single-row INSERTs, one round-trip
+     * each. Written in one batched statement instead (#27).
+     *
+     * @param array<int, array<string, int|float>> $pageKeywords Keyword frequencies, keyed by page uid
+     */
+    private function saveKeywords(array $pageKeywords, int $languageId = 0): void {
         $now = time();
-        
-        foreach ($keywords as $keyword => $frequency) {
-            $connection->insert(
-                'tx_pagelinkinsights_keywords',
-                [
+        $rows = [];
+
+        foreach ($pageKeywords as $pageUid => $keywords) {
+            foreach ($keywords as $keyword => $frequency) {
+                $rows[] = [
                     'pid' => 0,
                     'tstamp' => $now,
                     'crdate' => $now,
-                    'page_uid' => $pageUid,
-                    'keyword' => $keyword,
+                    'page_uid' => (int)$pageUid,
+                    'keyword' => (string)$keyword,
                     'frequency' => $frequency,
                     'weight' => 1.0,
                     'language' => $languageId
-                ]
-            );
+                ];
+            }
         }
+
+        if ($rows === []) {
+            return;
+        }
+
+        $this->connectionPool
+            ->getConnectionForTable('tx_pagelinkinsights_keywords')
+            ->bulkInsert(
+                'tx_pagelinkinsights_keywords',
+                $rows,
+                ['pid', 'tstamp', 'crdate', 'page_uid', 'keyword', 'frequency', 'weight', 'language']
+            );
     }
     
     private function getTopKeywords(array $pageIds, int $languageId = 0): array {
