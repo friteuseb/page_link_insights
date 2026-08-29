@@ -151,12 +151,18 @@ class PageLinkService
         // Get direct content links (already filtered by colPos in getContentElementLinks)
         $allLinks = $this->getContentElementLinks($pageUids);
 
-        // Filter links to only keep those where BOTH source AND target are in the subtree
-        $allLinks = array_filter($allLinks, function($link) use ($pageUidsString) {
-            return in_array($link['sourcePageId'], $pageUidsString, true)
-                && in_array($link['targetPageId'], $pageUidsString, true);
-        });
-        $allLinks = array_values($allLinks);
+        // Filter links to only keep those where BOTH source AND target are in
+        // the subtree. Looked up in a flipped map rather than with in_array()
+        // over the uid list: that scan ran once per end of every link, so the
+        // cost was pages x links, and on a site of a few thousand pages it was
+        // one of the two things that kept the scheduler task from ever
+        // finishing (#27).
+        $subtree = array_flip($pageUidsString);
+
+        $allLinks = array_values(array_filter($allLinks, function($link) use ($subtree) {
+            return isset($subtree[$link['sourcePageId']])
+                && isset($subtree[$link['targetPageId']]);
+        }));
 
         // Mark broken links using linkvalidator if available
         $linkvalidatorBrokenLinks = $this->getLinkvalidatorBrokenLinks($pageUids);
@@ -638,8 +644,20 @@ private function getPageTreeInfo(int $rootPageId): array
         }
     }
 
+    /**
+     * Called for every numeric href found in the content, which on a large site
+     * meant thousands of identical COUNT queries. Remembered per request (#27).
+     *
+     * @var array<int, bool>
+     */
+    private array $pageUidExists = [];
+
     private function isValidPageUid(int $uid): bool
     {
+        if (isset($this->pageUidExists[$uid])) {
+            return $this->pageUidExists[$uid];
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         $count = $queryBuilder
             ->count('uid')
@@ -651,8 +669,8 @@ private function getPageTreeInfo(int $rootPageId): array
             )
             ->executeQuery()
             ->fetchOne();
-            
-        return $count > 0;
+
+        return $this->pageUidExists[$uid] = $count > 0;
     }
 
     private function processMenuElement(array $content, array &$links): void
