@@ -876,6 +876,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxDepth: 10,
                 depthFromRoot: false
             };
+            const TOGGLE_FILTER_KEYS = ['standard', 'semantic', 'broken', 'menu', 'html', 'typolink', 'orphanedNodes'];
 
             if (filtersButton && filtersPanel) {
                 filtersButton.addEventListener('click', function() {
@@ -906,6 +907,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectAllButton) {
                 selectAllButton.addEventListener('click', function() {
                     Object.keys(filterState).forEach(key => {
+                        // Only the link-type and orphan checkboxes: maxDepth is a number and
+                        // depthFromRoot a mode. Setting maxDepth to true made the depth
+                        // filter compare against 1 and hide every node below it (#17).
+                        if (!TOGGLE_FILTER_KEYS.includes(key)) return;
                         filterState[key] = true;
                         const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
                         if (checkbox) checkbox.checked = true;
@@ -918,6 +923,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (deselectAllButton) {
                 deselectAllButton.addEventListener('click', function() {
                     Object.keys(filterState).forEach(key => {
+                        // Only the link-type and orphan checkboxes: maxDepth is a number and
+                        // depthFromRoot a mode. Setting maxDepth to false made the depth
+                        // filter compare against 0 and hide every node below it (#17).
+                        if (!TOGGLE_FILTER_KEYS.includes(key)) return;
                         filterState[key] = false;
                         const checkbox = document.getElementById(`filter-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`);
                         if (checkbox) checkbox.checked = false;
