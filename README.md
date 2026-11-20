@@ -165,6 +165,19 @@ The extension now includes thematic analysis capabilities that:
 
 Pages with similar content will be grouped together and colored according to their dominant theme, providing instant visual insights into your content structure.
 
+#### Where to find it in the backend
+
+Themes are computed by the scheduler task, not by the module itself:
+
+1. Run the **"Analyze Page Links and Themes"** scheduler task once on your site root
+   (see *Scheduler Task* above).
+2. Open **Page Links Analysis** and select a page of that tree.
+3. Each node is now colored by the dominant theme of its page, and a **Dominant Themes**
+   legend lists the themes and their colors at the top right of the diagram.
+
+Until the task has run, every node keeps the default color and no themes legend is shown.
+Themes are recomputed on each run of the task.
+
 #### NLP Support
 
 - If the `cywolf/nlp-tools` extension is installed, it will be used for advanced linguistic analysis
