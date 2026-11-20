@@ -19,10 +19,13 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 - **Inbound/Outbound Links**: Track connection counts for each page
 - **Broken Link Detection**: Automatically identify and visualize broken references (enhanced with linkvalidator data when available)
 
-### Thematic Analysis
-- **Keyword Extraction**: Automatically identify significant terms on each page
-- **Theme Clustering**: Group related content by detected themes
-- **Page-Theme Association**: See which themes are relevant to each page
+### Record Types
+- **Color by Type**: Pages and news records are drawn in distinct colors, with a legend
+- **News and Solr MLT**: With EXT:news and Solr, news records and their More-Like-This
+  links appear in the diagram
+
+> Thematic analysis (keywords and themes per page) is not part of the 1.8 line. It was
+> replaced by record-type coloring in 1.8.0 and lives in the **3.x line for TYPO3 14**.
 - **NLP Integration**: Uses NlpTools for advanced text analysis
 
 ### Global Statistics
@@ -38,14 +41,13 @@ This TYPO3 extension helps you optimize your website's internal linking structur
 
 ### Scheduler Task
 - **Automated Analysis**: Schedule regular site structure analysis
-- **Theme Processing**: Update thematic groupings automatically
 - **Historical Tracking**: Maintain metrics history for trend analysis
 
 ## Requirements
 
 - TYPO3 12.4 - 13.4
 - PHP 8.1 - 8.4
-- NlpTools extension (for thematic analysis)
+- NlpTools extension
 
 ### Optional
 - **cms-linkvalidator**: For enhanced broken link detection with actual HTTP validation
@@ -111,7 +113,7 @@ To set it up:
 
 #### How often should it run?
 
-The task simply recomputes the link/theme metrics for the configured subtree. Once it has run, the results stay available in the Page Link Insights backend module until the next run. So the frequency only depends on **how often your link structure changes** and how fresh you need the metrics to be:
+The task simply recomputes the link metrics for the configured subtree. Once it has run, the results stay available in the Page Link Insights backend module until the next run. So the frequency only depends on **how often your link structure changes** and how fresh you need the metrics to be:
 
 - **Run it manually** (recommended for most users): just execute the task once whenever you want up-to-date metrics — typically right before reviewing your internal linking. No recurring schedule needed.
 - **Daily / weekly**: useful if editors frequently add or restructure content and you want the metrics kept current automatically, without thinking about it. Daily is plenty for most editorial sites.
@@ -154,37 +156,12 @@ The module header displays status badges that can be dismissed:
 - **colPos badge**: Shows which column positions are being analyzed
 - **Semantic badge**: Indicates if semantic suggestions are enabled/available
 
-### Understanding Thematic Analysis
+### Node colors
 
-The extension now includes thematic analysis capabilities that:
-
-- Automatically extract significant keywords from your pages
-- Group these keywords into global themes
-- Associate themes with relevant pages
-- Visualize themes in the D3.js force diagram with color coding
-
-Pages with similar content will be grouped together and colored according to their dominant theme, providing instant visual insights into your content structure.
-
-#### Where to find it in the backend
-
-Themes are computed by the scheduler task, not by the module itself:
-
-1. Run the **"Analyze Page Links and Themes"** scheduler task once on your site root
-   (see *Scheduler Task* above).
-2. Open **Page Links Analysis** and select a page of that tree.
-3. Each node is now colored by the dominant theme of its page, and a **Dominant Themes**
-   legend lists the themes and their colors at the top right of the diagram.
-
-Until the task has run, every node keeps the default color and no themes legend is shown.
-Themes are recomputed on each run of the task.
-
-#### NLP Support
-
-- If the `cywolf/nlp-tools` extension is installed, it will be used for advanced linguistic analysis
-- If this extension is not available or encounters errors, a fallback method is automatically used
-- In all cases, relevant themes will be generated for your pages
-
-The clustering visualization works in both TYPO3 v12 and v13, and is compatible with PHP 8.1 to 8.4.
+Nodes are colored by record type (pages, and news records when EXT:news is installed),
+with a legend in the diagram. The 1.8 line does not extract keywords or themes: that
+analysis was replaced by record-type coloring in 1.8.0. It is available in the 3.x line
+(TYPO3 14), where nodes are colored by the dominant theme of their page.
 
 ### Linkvalidator Integration
 
@@ -207,7 +184,6 @@ For search functionality enhancement, see [README_SOLR.md](README_SOLR.md).
 - **Empty Visualization**: Ensure selected page has content with page references
 - **Missing Links**: Check if links are in the analyzed column positions
 - **Performance Issues**: Large sites may need higher PHP memory limits
-- **Theme Analysis Errors**: Verify NlpTools extension is installed
 - **Linkvalidator Not Working**: Ensure cms-linkvalidator scheduler task has been run at least once
 - **Semantic Suggestions Missing**: Install and configure the semantic_suggestion extension
 - **Database Analyzer Loop**: The Database Analyzer (*Admin Tools → Maintenance → Analyze Database*) may keep suggesting the same `ALTER TABLE ... DOUBLE PRECISION` statements for the `weight`/`relevance` columns even after executing them. The cause was a default-value mismatch (`'0.00'` in the schema vs `'0'` stored by MySQL 8.x / MariaDB). This is fixed from this version onwards: the affected columns now use `DEFAULT '0'`, matching the value the database actually stores and the other `DOUBLE PRECISION` columns in the extension. If you upgraded an existing installation, run the Database Analyzer **once** to align your schema; the suggestion will then stop reappearing. See [issue #22](https://github.com/friteuseb/page_link_insights/issues/22).

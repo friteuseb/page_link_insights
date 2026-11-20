@@ -872,12 +872,14 @@ private function getPageTreeInfo(int $rootPageId): array
         $storagePids = $this->getStorageFolderIds($pageUids);
         $allPids = array_unique(array_merge($pageUids, $storagePids));
 
-        // Check if news table exists
-        try {
-            $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_news_domain_model_news');
-        } catch (\Exception $e) {
+        // Without EXT:news the table does not exist, and getQueryBuilderForTable()
+        // does not check that: the query itself failed, so with the default
+        // includeSolrRecords = 1 every site without news broke the analysis.
+        if (!ExtensionManagementUtility::isLoaded('news')) {
             return [];
         }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_news_domain_model_news');
 
         $queryBuilder->getRestrictions()
             ->removeAll()
