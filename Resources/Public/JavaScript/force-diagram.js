@@ -46,6 +46,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log('Processed links:', links);
 
+        // One category per link, shared by the filters and the counts shown in the
+        // legend: "Broken Links (0)" answers the question without searching the diagram.
+        function linkCategory(link) {
+            if (link.broken) {
+                return 'broken';
+            }
+            const type = link.contentElement?.type;
+            if (type === 'semantic_suggestion') {
+                return 'semantic';
+            }
+            if (type === 'solr_mlt') {
+                return 'solr_mlt';
+            }
+            if (type && (type.includes('menu') || type === 'menu_sitemap_pages')) {
+                return 'menu';
+            }
+            if (type === 'html') {
+                return 'html';
+            }
+            if (type === 'typolink') {
+                return 'typolink';
+            }
+            return 'standard';
+        }
+        const linkCounts = { standard: 0, semantic: 0, solr_mlt: 0, broken: 0, menu: 0, html: 0, typolink: 0 };
+        links.forEach(link => {
+            linkCounts[linkCategory(link)]++;
+        });
+
         const svgElement = document.getElementById('force-diagram');
         if (!svgElement) {
             console.error('force-diagram SVG element not found');
@@ -447,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .attr("x", 30)
                 .attr("y", 15)
                 .attr("fill", "#00ff00")
-                .text(linkType.label);
+                .text(`${linkType.label} (${linkCounts[linkType.type] ?? 0})`);
 
             // Add interactivity
             legendItem.on("click", function(event, d) {
@@ -874,6 +903,18 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             const TOGGLE_FILTER_KEYS = ['standard', 'semantic', 'solr_mlt', 'broken', 'menu', 'html', 'typolink', 'orphanedNodes'];
 
+            // Number of links of each type next to its checkbox (ids use hyphens: filter-solr-mlt)
+            Object.entries(linkCounts).forEach(([key, count]) => {
+                const input = document.getElementById('filter-' + key.replace('_', '-'));
+                const label = input?.closest('label');
+                if (label && !label.querySelector('.link-count')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'link-count';
+                    badge.textContent = ` (${count})`;
+                    label.append(badge);
+                }
+            });
+
             if (filtersButton && filtersPanel) {
                 filtersButton.addEventListener('click', function() {
                     const isVisible = filtersPanel.style.display !== 'none';
@@ -966,38 +1007,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Function to determine if a link should be visible based on filters
             function shouldShowLink(linkData) {
-                // Handle broken links
-                if (linkData.broken) {
-                    return filterState.broken;
-                }
-
-                // Handle semantic suggestions (DB-based)
-                if (linkData.contentElement?.type === 'semantic_suggestion') {
-                    return filterState.semantic;
-                }
-
-                // Handle Solr MLT links
-                if (linkData.contentElement?.type === 'solr_mlt') {
-                    return filterState.solr_mlt;
-                }
-
-                // Handle specific link types based on content element type
-                const linkType = linkData.contentElement?.type;
-
-                if (linkType && (linkType.includes('menu') || linkType === 'menu_sitemap_pages')) {
-                    return filterState.menu;
-                }
-
-                if (linkType === 'html') {
-                    return filterState.html;
-                }
-
-                if (linkType === 'typolink') {
-                    return filterState.typolink;
-                }
-
-                // Default to standard links
-                return filterState.standard;
+                return filterState[linkCategory(linkData)];
             }
 
             // Function to calculate node depths from a root node
